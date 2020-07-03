@@ -5,6 +5,7 @@ import hmac
 import time
 import pandas
 from decimal import Context, Decimal
+from traceback import print_exc
 
 import os
 import sys
@@ -12,7 +13,9 @@ curr_path = os.path.abspath(__file__)
 root_path = os.path.abspath(os.path.join(curr_path, os.path.pardir, os.path.pardir))
 sys.path.append(root_path)
 
-from bot.exchanges.BaseExchange import BaseExchange
+from bot.Exchanges.Base.BaseExchange import BaseExchange
+from bot.Exchanges.Base.Exceptions import \
+	InvalidCredentialsException, InternalExchangeException, ExchangeConnectionException
 
 class Binance(BaseExchange):
 
@@ -40,20 +43,24 @@ class Binance(BaseExchange):
 	BASE_URL = 'https://api.binance.com'
 	
 	ENDPOINTS = {
-			"order": '/api/v3/order',
-			"testOrder": '/api/v3/order/test',
-			"allOrders": '/api/v3/allOrders',
-			"klines": '/api/v3/klines',
-			"exchangeInfo": '/api/v3/exchangeInfo',
-			"averagePrice" : '/api/v3/avgPrice',
-			"orderBook" : '/api/v3/depth',
-			"account" : '/api/v3/account'
-		}
+		"order": '/api/v3/order',
+		"testOrder": '/api/v3/order/test',
+		"allOrders": '/api/v3/allOrders',
+		"klines": '/api/v3/klines',
+		"exchangeInfo": '/api/v3/exchangeInfo',
+		"averagePrice" : '/api/v3/avgPrice',
+		"orderBook" : '/api/v3/depth',
+		"account" : '/api/v3/account'
+	}
+
+	SYMBOL_DATAS = dict()
 
 	def __init__(self, filename=None, api_key=None, secret_key=None):
 		
-		self.has_credentials = False
 		self.api_keys = None
+		self.has_credentials = False
+
+		self._updateSymbolsData()
 
 		# Adding credentials FROM FILE
 		if filename is not None:
@@ -72,7 +79,7 @@ class Binance(BaseExchange):
 		self.headers = dict()
 		# Adding required Headers if credentials exist
 		if self.has_credentials:
-			self.headers["X-MBX-APIKEY"] = self.api_keys[0]['api_key']
+			self.headers["X-MBX-APIKEY"] = self.api_keys['api_key']
 
 	def _get(self, url, params=None, headers=None):
 		""" Implements a get request for this exchange """
@@ -81,7 +88,8 @@ class Binance(BaseExchange):
 			data = json.loads(response.text)
 			data['url'] = url
 		except Exception as e:
-			print("Exception occured when trying to GET from "+url); print(e)
+			print("Exception occured when trying to GET from "+url); 
+			print_exc()
 			data = {'code': '-1', 'url':url, 'msg': e}
 		return data
 
@@ -92,7 +100,8 @@ class Binance(BaseExchange):
 			data = json.loads(response.text)
 			data['url'] = url
 		except Exception as e:
-			print("Exception occured when trying to POST to "+url); print(e); print("Params"); print(params)
+			print("Exception occured when trying to POST to "+url); print(e); print("Params"); print(params);
+			print_exc()
 			data = {'code': '-1', 'url':url, 'msg': e}
 		return data
 
@@ -103,22 +112,39 @@ class Binance(BaseExchange):
 			data = json.loads(response.text)
 			data['url'] = url
 		except Exception as e:
-			print("Exception occured when trying to DELETE from "+url); print(e); print("Params"); print(params)
+			print("Exception occured when trying to DELETE from "+url); print(e); print("Params"); print(params);
+			print_exc()
 			data = {'code': '-1', 'url':url, 'msg': e, 'params':params}
 		return data
 
-	def _signRequest(self, params, key_index=0):
+	def _signRequest(self, params):
 		""" Signs a request with the API & SECRET keys """
 		query_string = '&'.join(["{}={}".format(d, params[d]) for d in params])
-		signature = hmac.new(self.api_keys[key_index]['secret_key'].encode('utf-8'), query_string.encode('utf-8'), hashlib.sha256)
+		signature = hmac.new(self.api_keys['secret_key'].encode('utf-8'), query_string.encode('utf-8'), hashlib.sha256)
 		params['signature'] = signature.hexdigest()
+
+	def _getSymbolsData(self):
+		""" Gets All symbols' data from Binance """
+		url = Binance.BASE_URL + Binance.ENDPOINTS["exchangeInfo"]
+		data = self._get(url)
+		if not Binance.isValidResponse(data):
+			return []
+
+		symbols_list = []
+		for pair in data['symbols']:
+			symbols_list.append(pair)
+  
+		return symbols_list
+
+	def _updateSymbolsData(self):
+		symbols = self._getSymbolsData()
+		for symb in symbols:
+			Binance.SYMBOL_DATAS[symb['symbol']] = symb
 
 	def addCredentials(self, api_key, secret_key):
 		""" Adds API & SECRET keys into the object's memory """
 		new_keys = dict(api_key=api_key, secret_key=secret_key)
-		if self.api_keys is None:
-			self.api_keys = []
-		self.api_keys.append(new_keys)
+		self.api_keys = new_keys
 		self.has_credentials = True
 
 	def getAccountData(self):
@@ -146,7 +172,7 @@ class Binance(BaseExchange):
 		url = Binance.BASE_URL + Binance.ENDPOINTS["exchangeInfo"]
 		data = self._get(url)
 		if not Binance.isValidResponse(data):
-			return []
+			raise ExchangeConnectionException()
 
 		symbols_list = []
 		if quote_assets != None and len(quote_assets) > 0:
@@ -165,8 +191,8 @@ class Binance(BaseExchange):
 		""" Gets Order Book data for symbol """
 		return None
 	
-	def _getSymbolKlinesExtra(self, 
-	symbol:str, interval:str, limit:int=1000, end_time=False):
+	def _getSymbolKlinesExtra(self, symbol:str, interval:str, 
+	limit:int=1000, end_time=False, cast_to:type=float):
 		""" Gets candlestick data for one symbol if more than 1000
 		candles are requested (because of the Binance rate limitation
 		of only 1000 candles per request, this function cals getSymbolKlines
@@ -190,18 +216,20 @@ class Binance(BaseExchange):
 			initial_limit = 1000
 		# First, we get the last initial_limit candles, starting at end_time and going
 		# backwards (or starting in the present moment, if end_time is False)
-		df = self.GetSymbolKlines(symbol, interval, limit=initial_limit, end_time=end_time)
+		df = self.getSymbolKlines(
+			symbol, interval, limit=initial_limit, end_time=end_time, cast_to=cast_to)
 		while repeat_rounds > 0:
 			# Then, for every other 1000 candles, we get them, but starting at the beginning
 			# of the previously received candles.
-			df2 = self.getSymbolKlines(symbol, interval, limit=1000, end_time=df['time'][0])
+			df2 = self.getSymbolKlines(
+				symbol, interval, limit=1000, end_time=df['time'][0], cast_to=cast_to)
 			df = df2.append(df, ignore_index = True)
 			repeat_rounds = repeat_rounds - 1
 		
 		return df
 
-	def getSymbolKlines(self, 
-	symbol:str, interval:str, limit:int=1000, end_time:any=False):
+	def getSymbolKlines(self, symbol:str, interval:str, 
+	limit:int=1000, end_time:any=False, cast_to:type=float):
 		"""
 		Gets candlestick data for one symbol 
 		
@@ -225,7 +253,8 @@ class Binance(BaseExchange):
 		"""
 
 		if limit > 1000:
-			return self._getSymbolKlinesExtra(symbol, interval, limit, end_time)
+			return self._getSymbolKlinesExtra(
+				symbol, interval, limit, end_time, cast_to=cast_to)
 		
 		params = '?&symbol='+symbol+'&interval='+interval+'&limit='+str(limit)
 		if end_time:
@@ -247,7 +276,7 @@ class Binance(BaseExchange):
 
 		# transform values from strings to floats
 		for col in col_names:
-			df[col] = df[col].astype(float)
+			df[col] = df[col].astype(cast_to)
 
 		df['date'] = pandas.to_datetime(df['time'] * 1000000, infer_datetime_format=True)
 
@@ -281,7 +310,8 @@ class Binance(BaseExchange):
 		return self._post(url, params, self.headers)
 
 	def placeMarketOrder(self, 
-	symbol:str, amount:str, quote_amount, side:str, test:bool=False):
+	symbol:str, amount:str, quote_amount, side:str, test:bool=False, 
+ 	round_up_amount=False, custom_id=False):
 		""" Places side (buy/sell) market order for amount of symbol.
 			Check this link for more info on the required parameters: 
 			https://github.com/binance-exchange/binance-official-api-docs/blob/master/rest-api.md#new-order--trade
@@ -294,13 +324,17 @@ class Binance(BaseExchange):
 			'recvWindow': 5000,
 			'timestamp': int(round(time.time()*1000))
 		}
-						
+
+		if custom_id is not False:
+			params['newClientOrderId'] = custom_id
+
 		if amount is not None:
-  			params['quantity'] = amount
+			params['quantity'] = format(Binance.toValidQuantity(symbol, 
+																		amount, round_up_amount), 'f')
 
 		elif quote_amount is not None:
-  			params['quoteOrderQty'] = quote_amount
-
+			params['quoteOrderQty'] = format(Binance.toValidQuantity(symbol, 
+																quote_amount, round_up_amount), 'f')
 
 		self._signRequest(params)
 		if test: 
@@ -310,8 +344,9 @@ class Binance(BaseExchange):
 		url = Binance.BASE_URL + Binance.ENDPOINTS['order']
 		return self._post(url, params=params, headers=self.headers)
 
-	def placeLimitOrder(self, 
-	symbol:str, price, amount, quote_amount, side:str, test:bool=False):
+	def placeLimitOrder(self, symbol:str, price, amount,
+	quote_amount, side:str, test:bool=False, round_up_price=False,
+	round_up_amount=False, custom_id=False):
 		""" Places side (buy/sell) limit order for amount of symbol at price.
 			Check this link for more info on the required parameters: 
 			https://github.com/binance-exchange/binance-official-api-docs/blob/master/rest-api.md#new-order--trade 
@@ -322,15 +357,19 @@ class Binance(BaseExchange):
 			'type': Binance.ORDER_TYPE_LIMIT,
 			'recvWindow': 5000,
 			'timeInForce': 'GTC',
-			'price': Binance.floatToString(price),
+			'price': format(Binance.toValidPrice(symbol, price), 'f'),
 			'timestamp': int(round(time.time()*1000))
 		}
 				
+		if custom_id is not False:
+			params['newClientOrderId'] = custom_id
+				
 		if amount is not None:
-				params['quantity'] = amount
-
+			params['quantity'] = format(Binance.toValidQuantity(symbol, 
+																		amount, round_up_price), 'f')
 		elif quote_amount is not None:
-				params['quoteOrderQty'] = quote_amount
+			params['quoteOrderQty'] = format(Binance.toValidQuantity(
+										symbol, quote_amount, round_up_amount), 'f')
 
 		self._signRequest(params)
 		if test: 
@@ -415,7 +454,6 @@ class Binance(BaseExchange):
 		
 		if not pr_filter.keys().__contains__("tickSize"):
 			raise Exception("Couldn't find tickSize or PRICE_FILTER in symbol_data.")
-			return
 
 		round_off_by = int(cls._get10Factor((float(pr_filter["tickSize"]))))
 		number = round(Decimal(desired_price), round_off_by)
@@ -439,9 +477,70 @@ class Binance(BaseExchange):
 		
 		if not lot_filter.keys().__contains__("stepSize"):
 			raise Exception("Couldn't find stepSize or PRICE_FILTER in symbol_data.")
-			return
 
 		round_off_by = int(cls._get10Factor((float(lot_filter["stepSize"]))))
+		number = round(Decimal(desired_quantity), round_off_by)
+		if round_up:
+			number = number + Decimal(lot_filter["stepSize"])
+
+		return number
+
+	@staticmethod
+	def toValidPrice(symbol, desired_price, round_up:bool=False) \
+		-> Decimal():
+		""" Returns the minimum quantity of a symbol we can buy, 
+		closest to desiredPrice """
+		
+		pr_filter = {}
+		
+		if not Binance.SYMBOL_DATAS.__contains__(symbol):
+			Binance._updateSymbolsData()
+			if not Binance.SYMBOL_DATAS.__contains__(symbol):
+				raise InternalExchangeException(\
+					"Could not find symbol data of "+symbol)
+
+		for fil in Binance.SYMBOL_DATAS[symbol]["filters"]:
+			if fil["filterType"] == "PRICE_FILTER":
+				pr_filter = fil
+				break
+		
+		if not pr_filter.keys().__contains__("tickSize"):
+			raise InternalExchangeException(\
+				"Couldn't find tickSize or PRICE_FILTER in symbol_data.")
+
+		round_off_by = int(Binance._get10Factor((float(pr_filter["tickSize"]))))
+		number = round(Decimal(desired_price), round_off_by)
+		if round_up:
+			number = number + Decimal(pr_filter["tickSize"])
+
+		return number
+
+	@staticmethod
+	def toValidQuantity(symbol, desired_quantity, round_up:bool=False) \
+		-> Decimal():
+		""" Returns the minimum quantity of a symbol we can buy,
+		closest to desiredPrice """
+		
+		lot_filter = {}
+
+		# Check whether SD exists
+		if not Binance.SYMBOL_DATAS.__contains__(symbol):
+			Binance._updateSymbolsData()
+			if not Binance.SYMBOL_DATAS.__contains__(symbol):
+				raise InternalExchangeException(\
+					"Could not find symbol data of "+symbol)
+
+		# Check the LOT SIZE filter on SD
+		for fil in Binance.SYMBOL_DATAS[symbol]["filters"]:
+			if fil["filterType"] == "LOT_SIZE":
+				lot_filter = fil
+				break
+		
+		if not lot_filter.keys().__contains__("stepSize"):
+			raise InternalExchangeException(\
+				"Couldn't find stepSize or PRICE_FILTER in symbol_data.")
+
+		round_off_by = int(Binance._get10Factor((float(lot_filter["stepSize"]))))
 		number = round(Decimal(desired_quantity), round_off_by)
 		if round_up:
 			number = number + Decimal(lot_filter["stepSize"])
