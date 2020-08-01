@@ -309,8 +309,8 @@ class Binance(BaseExchange):
 		url = Binance.BASE_URL + Binance.ENDPOINTS['order']
 		return self._post(url, params, self.headers)
 
-	def placeMarketOrder(self, 
-	symbol:str, amount:str, quote_amount, side:str, test:bool=False, 
+	def placeMarketOrder(self, symbol:str, amount:str, 
+	quote_amount, side:str, test:bool=False, 
  	round_up_amount=False, custom_id=False):
 		""" Places side (buy/sell) market order for amount of symbol.
 			Check this link for more info on the required parameters: 
@@ -344,8 +344,8 @@ class Binance(BaseExchange):
 		url = Binance.BASE_URL + Binance.ENDPOINTS['order']
 		return self._post(url, params=params, headers=self.headers)
 
-	def placeLimitOrder(self, symbol:str, price, amount,
-	quote_amount, side:str, test:bool=False, round_up_price=False,
+	def placeLimitOrder(self, symbol:str, price, amount, 
+	side:str, test:bool=False, round_up_price=False,
 	round_up_amount=False, custom_id=False):
 		""" Places side (buy/sell) limit order for amount of symbol at price.
 			Check this link for more info on the required parameters: 
@@ -357,7 +357,7 @@ class Binance(BaseExchange):
 			'type': Binance.ORDER_TYPE_LIMIT,
 			'recvWindow': 5000,
 			'timeInForce': 'GTC',
-			'price': format(Binance.toValidPrice(symbol, price), 'f'),
+			'price': format(Binance.toValidPrice(symbol, price, round_up_price), 'f'),
 			'timestamp': int(round(time.time()*1000))
 		}
 				
@@ -366,10 +366,7 @@ class Binance(BaseExchange):
 				
 		if amount is not None:
 			params['quantity'] = format(Binance.toValidQuantity(symbol, 
-																		amount, round_up_price), 'f')
-		elif quote_amount is not None:
-			params['quoteOrderQty'] = format(Binance.toValidQuantity(
-										symbol, quote_amount, round_up_amount), 'f')
+																		amount, round_up_amount), 'f')
 
 		self._signRequest(params)
 		if test: 
@@ -425,12 +422,12 @@ class Binance(BaseExchange):
 
 	@classmethod
 	def _get10Factor(cls, num):
-		""" Returns the number of 0s before the first non-0 digit of a number 
-		(if |num| is < than 1) or negative the number of digits between the first 
-		integer digit and the last, (if |num| >= 1) 
+		""" Returns the power of 10 with which this number needs to be multiplied 
+		so that it's between 1 (inclusive) and 10 (exclusive)
 		
-		get10Factor(0.00000164763) = 6
-		get10Factor(1600623.3) = -6
+		_get10Factor(0.00000164763) = 6
+
+		_get10Factor(1600623.3) = -6
 		"""
 		p = 0
 		for i in range(-20, 20):
@@ -546,3 +543,28 @@ class Binance(BaseExchange):
 			number = number + Decimal(lot_filter["stepSize"])
 
 		return number
+
+
+	def updateSQLOrderModel(self, order, new_order_response, bot):
+		""" Updates an order based on it's state on the exchange given by 
+		new_order_response. Should be part of the exchange interface  """
+
+		if order.is_test:
+			order.take_profit_price = Binance.toValidPrice(
+				symbol = order.symbol,
+				desired_price = Decimal(order.entry_price) * (Decimal(100) + Decimal(bot.profit_target))/Decimal(100), 
+				round_up=True)
+
+		else:
+			order.timestamp = new_order_response['transactTime']
+			order.entry_price = new_order_response['price']
+			order.take_profit_price = Binance.toValidPrice(
+				symbol = order.symbol,
+				desired_price = Decimal(new_order_response['price']) * Decimal(bot.profit_target), 
+				round_up=True)
+			order.original_quantity =  Decimal(new_order_response['origQty'])
+			order.executed_quantity =  Decimal(new_order_response['executedQty'])
+			order.status = new_order_response['status']
+			order.side = new_order_response['side']
+
+		return order

@@ -121,16 +121,17 @@ def backtest(df, sd, exchange,
 				buy_price = exchange.roundToValidPrice(sd, strategy_result)
 				buy_times.append([df['time'][i], buy_price])
 				
-				# print(buy_price)
-
+				# Initialize TAKE PROFIT PRICE
 				if exit_settings.pt is not None:
 					next_target_price = exchange.roundToValidPrice(sd,\
 						buy_price * Decimal(exit_settings.pt), round_up=True)
 
+				# Initialize STOP LOSS PRICE
 				if exit_settings.sl is not None:
 					sl_price =  exchange.roundToValidPrice(sd,\
 						buy_price * Decimal(exit_settings.sl))
 
+				# Initialize TRAILING STOP LOSS PRICE
 				if exit_settings.tsl is not None:
 					tsl_activate_after =  exchange.roundToValidPrice(sd,\
 						buy_price * Decimal(exit_settings.tsl.after_profit))
@@ -141,6 +142,7 @@ def backtest(df, sd, exchange,
 						tsl_sell_price =  exchange.roundToValidPrice(sd,\
 							buy_price * Decimal(exit_settings.tsl.value))
 
+				# Initialize SUBSEQUENT ENTRY PRICE
 				if entry_settings.se is not None:
 					next_entry_price = exchange.roundToValidPrice(sd,\
 						buy_price * Decimal(entry_settings.se.after_profit))
@@ -226,7 +228,8 @@ def backtest(df, sd, exchange,
 				subsequent_buys = subsequent_buys + 1
 				
 			### TAKE PROFIT LOGIC
-			elif exit_settings.pt is not None and \
+			if exit_settings.pt is not None and \
+				exit_settings.tsl is None and \
 				Decimal(df['high'][i]) > next_target_price:
 				tp_sell_times.append([df['time'][i], next_target_price])
 				profits_list.append(next_target_price - last_buy['price'])

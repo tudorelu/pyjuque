@@ -211,7 +211,7 @@ def PlotData(df,
 	if y2 and y3:
 		layout.update(
 			yaxis={
-				"domain": [0.5, 1],
+				"domain": [0.3, 1],
 				# "title": "Price", 
 				"fixedrange":False,
 				"ticks": '',
@@ -219,21 +219,21 @@ def PlotData(df,
 			})
 		layout.update(
 			yaxis2=dict(
-				domain = [0.25, 0.48],
+				domain = [0.15, 0.29],
 				side = 'right',
 				showticklabels = False,
 				# title  = "Volume"
 			))
 		layout.update(
 			yaxis3=dict(
-				domain = [0, 0.23],
+				domain = [0, 0.15],
 				showticklabels = False,
 				# title=""
 			))
 	elif y2:
 		layout.update(
 			yaxis={
-				"domain": [0.3, 1],
+				"domain": [0.25, 1],
 				# "title": "Price", 
 				"fixedrange":False,
 				"ticks": '',
@@ -241,7 +241,7 @@ def PlotData(df,
 		)
 		layout.update(
 			yaxis2=dict(
-				domain = [0, 0.28],
+				domain = [0, 0.24],
 				side = 'right',
 				showticklabels = False,
 				# title  = "Volume"
@@ -249,7 +249,7 @@ def PlotData(df,
 	elif y3:
 		layout.update(
 			yaxis={
-				"domain": [0.3, 1],
+				"domain": [0.25, 1],
 				# "title": "Price", 
 				"fixedrange":False,
 				"ticks": '',
@@ -257,7 +257,7 @@ def PlotData(df,
 		)
 		layout.update(
 			yaxis3=dict(
-				domain = [0, 0.28],
+				domain = [0, 0.24],
 				showticklabels = False,
 				# ticks="",
 				# title=""
@@ -265,7 +265,7 @@ def PlotData(df,
 	else:
 		layout.update(
 			yaxis={
-				"domain": [0.5, 1],
+				"domain": [0.1, 1],
 				# "title": "Price", 
 				"fixedrange":False,
 				"ticks": '',
