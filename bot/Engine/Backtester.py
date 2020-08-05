@@ -106,7 +106,8 @@ def backtest(df, sd, exchange,
 	tsl_increase_price = None
 	tsl_activate_after = None
 
-	strategy = entry_strategy.strategy_class(df,  *entry_strategy.args)
+	strategy = entry_strategy.strategy_class(*entry_strategy.args)
+	strategy.setup(df)
 
 	# Go through all the candlesticks
 	for i in range(0, len(df['close'])-1):
@@ -118,7 +119,7 @@ def backtest(df, sd, exchange,
 
 			if strategy_result:
 				# If strategy is fulfilled, buy the coin 
-				buy_price = exchange.roundToValidPrice(sd, strategy_result)
+				buy_price = exchange.roundToValidPrice(sd, df['close'][i])
 				buy_times.append([df['time'][i], buy_price])
 				
 				# Initialize TAKE PROFIT PRICE
@@ -243,7 +244,7 @@ def backtest(df, sd, exchange,
 
 	ms = df['time'][len(df['time'])-1] - df['time'][0]
 	return dict(
-		total_profit_loss = round(resulting_percentage, 2),
+		total_profit_loss = round(float(resulting_percentage), 2),
 		buy_times = buy_times, 
 		tp_sell_times = tp_sell_times,
 		sl_sell_times = sl_sell_times,

@@ -3,11 +3,11 @@ from bot.Indicators import AddIndicator
 class EMACrossover:
 
 	def __init__(self, df, fast, slow):
-		self.df = df
 		self.fast = fast
 		self.slow = slow
 
-	def setup(self):
+	def setup(self, df):
+		self.df = df
 		AddIndicator(self.df, "sma", "sma_fast", self.fast)
 		AddIndicator(self.df, "sma", "sma_slow", self.slow)
 
@@ -15,7 +15,7 @@ class EMACrossover:
 		df = self.df
 		if i > 0 and df['sma_fast'][i] >= df['sma_slow'][i] \
 			and df['sma_fast'][i-1] < df['sma_slow'][i-1]:
-			return df['close'][i]
+			return True
 		return False
 	
 	def getSignalsList(self):
