@@ -2,12 +2,12 @@ from bot.Indicators import AddIndicator
 
 class EMACrossover:
 
-	def __init__(self, df, fast, slow):
-		self.df = df
+	def __init__(self, fast, slow):
 		self.fast = fast
 		self.slow = slow
 
-	def setup(self):
+	def setup(self, df):
+		self.df = df
 		AddIndicator(self.df, "sma", "sma_fast", self.fast)
 		AddIndicator(self.df, "sma", "sma_slow", self.slow)
 

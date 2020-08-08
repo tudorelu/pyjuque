@@ -9,20 +9,19 @@ class BBRSIStrategy:
 			`rsi_ob` = Overbought level of RSI	
 			`rsi_os` = Oversold level of RSI	
 	"""
-	def __init__(self, df, 	
+	def __init__(self, 	
 		rsi_len = 8, 
 		bb_len = 100, 
 		rsi_ob = 50, 
 		rsi_os = 50):
-		self.df = df
 		self.rsi_ob = rsi_ob
 		self.rsi_os = rsi_os
 		self.bb_len = bb_len
 		self.rsi_len = rsi_len
 
-		self.setup()
 
-	def setup(self):
+	def setup(self, df):
+		self.df = df
 		AddIndicator(self.df, "rsi", "rsi", self.rsi_len)
 		AddIndicator(self.df, "lbb", "lbb", self.bb_len)
 		AddIndicator(self.df, "ubb", "ubb", self.bb_len)
