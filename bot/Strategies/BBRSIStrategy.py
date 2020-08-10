@@ -26,6 +26,7 @@ class BBRSIStrategy:
 		AddIndicator(self.df, "lbb", "lbb", self.bb_len)
 		AddIndicator(self.df, "ubb", "ubb", self.bb_len)
 
+
 	def getIndicators(self):
 		return [
 			dict(name="rsi", title="RSI", yaxis="y3"),
