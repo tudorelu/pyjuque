@@ -9,12 +9,7 @@
 import pandas as pd
 from decimal import Decimal
 
-# HELPER CLASS
-class dotdict(dict):
-	"""dot.notation access to dictionary attributes"""
-	__getattr__ = dict.get
-	__setattr__ = dict.__setitem__
-	__delattr__ = dict.__delitem__
+from bot.Utils import dotdict
 
 model_entry_strategy:dotdict = dotdict(dict(
 	strategy_class = "some_function",
@@ -106,8 +101,9 @@ def backtest(df, sd, exchange,
 	tsl_increase_price = None
 	tsl_activate_after = None
 
-	strategy = entry_strategy.strategy_class(df,  *entry_strategy.args)
-
+	strategy = entry_strategy.strategy_class(*entry_strategy.args)
+	strategy.setup(df)
+	
 	# Go through all the candlesticks
 	for i in range(0, len(df['close'])-1):
 

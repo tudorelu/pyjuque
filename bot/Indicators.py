@@ -255,13 +255,25 @@ def HA(df, ohlc=['open', 'high', 'low', 'close']):
 
 	return df
 
+def isSupport(df,i):
+	return df['low'][i] < df['low'][i-1] \
+		and df['low'][i] < df['low'][i+1] \
+		and df['low'][i+1] < df['low'][i+2] \
+		and df['low'][i-1] < df['low'][i-2] 
+
+def isResistance(df,i):
+	return df['high'][i] > df['high'][i-1] \
+		and df['high'][i] > df['high'][i+1] \
+		and df['high'][i+1] > df['high'][i+2] \
+		and df['high'][i-1] > df['high'][i-2] 
+
+
 INDICATOR_DICT = {
 	"sma": sma,
 	"ema": ema,
 	"lbb": lbb,
 	"ubb": ubb,
 	"cci": cci,
-	# "roc": roc,
 	"rsi": rsi,
 	"smoothrng": smoothrng,
 	"ott": ott

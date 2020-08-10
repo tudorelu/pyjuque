@@ -15,11 +15,7 @@ from bot.Plotter import PlotData
 
 from pprint import pprint
 
-class dotdict(dict):
-	"""dot.notation access to dictionary attributes"""
-	__getattr__ = dict.get
-	__setattr__ = dict.__setitem__
-	__delattr__ = dict.__delitem__
+from bot.Utils import dotdict
 		
 entry_strategy:dotdict = dotdict(dict(
 	strategy_class = BBRSIStrategy,
@@ -55,7 +51,8 @@ def Main():
 	results = backtest(df, sd, binance, entry_strategy, entry_settings, exit_settings)
 
 	pprint(results['total_profit_loss'])
-	strategy = entry_strategy.strategy_class(df, *entry_strategy.args)
+	strategy = entry_strategy.strategy_class(*entry_strategy.args)
+	strategy.setup(df)
 
 	signals=[
 		dict(points=results['buy_times'], name="buy_times"),

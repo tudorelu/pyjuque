@@ -22,9 +22,9 @@ class BBRSIStrategy:
 
 	def setup(self, df):
 		self.df = df
-		AddIndicator(self.df, "rsi", "rsi", self.rsi_len)
-		AddIndicator(self.df, "lbb", "lbb", self.bb_len)
-		AddIndicator(self.df, "ubb", "ubb", self.bb_len)
+		AddIndicator(self.df, "rsi", "rsi", 'close', self.rsi_len)
+		AddIndicator(self.df, "lbb", "lbb", 'close', self.bb_len)
+		AddIndicator(self.df, "ubb", "ubb", 'close', self.bb_len)
 
 
 	def getIndicators(self):
