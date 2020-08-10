@@ -24,7 +24,7 @@ def Main():
 
 	df['ott'] = df['ott'].shift(2)
 	PlotData(df, plot_indicators=strategy.getIndicators(), signals=signals,
-		show_plot=True, plot_title="SmoothrngStrategy")
+		show_plot=True, plot_title="OTTStrategy")
 
 if __name__ == '__main__':
 	Main()

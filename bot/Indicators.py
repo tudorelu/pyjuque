@@ -1,15 +1,16 @@
 # TI & TA
-from pyti.smoothed_moving_average import smoothed_moving_average as sma
-from pyti.bollinger_bands import lower_bollinger_band as lbb
-from pyti.bollinger_bands import upper_bollinger_band as ubb
+from pyti.smoothed_moving_average import smoothed_moving_average as pyti_smmoothed_ma
+from pyti.simple_moving_average import simple_moving_average as pyti_sma 
+from pyti.bollinger_bands import lower_bollinger_band as pyti_lbb
+from pyti.bollinger_bands import upper_bollinger_band as pyti_ubb
 from pyti.accumulation_distribution import accumulation_distribution as acd
 from pyti.aroon import aroon_up
 from pyti.aroon import aroon_down
 
 from pyti.rate_of_change import rate_of_change as roc
-from pyti.relative_strength_index import relative_strength_index as rsi
+from pyti.relative_strength_index import relative_strength_index as pyti_rsi
 from pyti.commodity_channel_index import commodity_channel_index 
-from pyti.exponential_moving_average import exponential_moving_average as ema
+from pyti.exponential_moving_average import exponential_moving_average as pyti_ema
 
 from traceback import print_exc
 
@@ -202,31 +203,76 @@ def ott(df, pds, percent):
 
 	return Var, OTT
 
+def sma(df, source, period):
+  return pyti_sma(df[source].tolist(), period)
+
+def ema(df, source, period):
+  return pyti_ema(df[source].tolist(), period)
+
+def lbb(df, source, period):
+  return pyti_lbb(df[source].tolist(), period)
+
+def ubb(df, source, period):
+  return pyti_ubb(df[source].tolist(), period)
+
+def rsi(df, source, period):
+  return pyti_rsi(df[source].tolist(), period)
+
+def HA(df, ohlc=['open', 'high', 'low', 'close']):
+	"""
+	Function to compute Heiken Ashi Candles (HA)
+	
+	Args 
+	--
+	df : Pandas DataFrame which contains `['date', 'open', 'high', 'low', 'close', 'volume']` columns
+	ohlc: List defining OHLC Column names (default `['open', 'high', 'low', 'close']`)
+			
+	Returns 
+	--
+	df : Pandas DataFrame with new columns added for 
+			Heiken Ashi Close (HA_$ohlc[3])
+			Heiken Ashi Open (HA_$ohlc[0])
+			Heiken Ashi High (HA_$ohlc[1])
+			Heiken Ashi Low (HA_$ohlc[2])
+	"""
+
+	ha_open = 'HA_' + ohlc[0]
+	ha_high = 'HA_' + ohlc[1]
+	ha_low = 'HA_' + ohlc[2]
+	ha_close = 'HA_' + ohlc[3]
+	
+	df[ha_close] = (df[ohlc[0]] + df[ohlc[1]] + df[ohlc[2]] + df[ohlc[3]]) / 4
+
+	df[ha_open] = 0.00
+	for i in range(0, len(df)):
+			if i == 0:
+					df[ha_open].iat[i] = (df[ohlc[0]].iat[i] + df[ohlc[3]].iat[i]) / 2
+			else:
+					df[ha_open].iat[i] = (df[ha_open].iat[i - 1] + df[ha_close].iat[i - 1]) / 2
+					
+	df[ha_high]=df[[ha_open, ha_close, ohlc[1]]].max(axis=1)
+	df[ha_low]=df[[ha_open, ha_close, ohlc[2]]].min(axis=1)
+
+	return df
 
 INDICATOR_DICT = {
 	"sma": sma,
 	"ema": ema,
 	"lbb": lbb,
 	"ubb": ubb,
-	"ema": ema,
 	"cci": cci,
-	"roc": roc,
+	# "roc": roc,
 	"rsi": rsi,
-	"roc": roc,
 	"smoothrng": smoothrng,
 	"ott": ott
 }
 
 def AddIndicator(df, indicator_name:str, col_name, *args):
 	try:
-		if indicator_name == "cci":
-			df[col_name] = cci(df, *args)
-		elif indicator_name == "smoothrng":
-			df[col_name] = smoothrng(df, *args)
-		elif indicator_name == "ott":
+		if indicator_name == "ott":
 			df[col_name[0]], df[col_name[1]] = ott(df, *args)
 		else:
-			df[col_name] = INDICATOR_DICT[indicator_name](df['close'].tolist(), *args)
+			df[col_name] = INDICATOR_DICT[indicator_name](df, *args)
 	except Exception as e:
 		print_exc()
 		print("\nException raised when trying to compute the", indicator_name, "indicator:\n")
