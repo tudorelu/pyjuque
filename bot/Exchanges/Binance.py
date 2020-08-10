@@ -20,6 +20,7 @@ from bot.Exchanges.Base.Exceptions import \
 class Binance(BaseExchange):
 
 	ORDER_STATUS_NEW = 'NEW'
+	
 	ORDER_STATUS_PARTIALLY_FILLED = 'PARTIALLY_FILLED'
 	ORDER_STATUS_FILLED = 'FILLED'
 	ORDER_STATUS_CANCELED = 'CANCELED'
