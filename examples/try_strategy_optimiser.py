@@ -25,22 +25,11 @@ entry_strategy:dotdict = dotdict(dict(
 ))
 
 entry_settings:dotdict = dotdict(dict(
-	# subsequent entries
-	# se = dotdict(dict(
-	# 	times = 1,
-	# 	after_profit = 0.99,	
-	# 	pt_decrease = 0.998,
-	# ))
+
 ))
 
 exit_settings:dotdict = dotdict(dict( 
 	pt = 1.025, 
-	# trailins stop loss
-	# tsl = dotdict(dict(
-	# 	value = 0.985,
-	# 	after_profit = 1.015
-	# )),
-	# stop loss
 	sl = 0.9
 ))
 
@@ -50,30 +39,27 @@ def Main():
 	binance = Binance()
 	sd = binance.SYMBOL_DATAS[symbol]
 	df = binance.getSymbolKlines(symbol, "1h", limit=1000)
-	
+
 	def fitness_function(individual):
-		pt = round(Decimal(int(individual[4])) / Decimal(1000), 3)
+  		pt = round(Decimal(int(individual[4])) / Decimal(1000), 3)
 		entry_strategy.args = tuple(individual[0:4])
 		exit_settings.pt = pt
 		results = backtest(df, sd, binance, entry_strategy, entry_settings, exit_settings)
-		# print("Individual", individual, float(results['total_profit_loss']))
 		return float(results['total_profit_loss'])
-	
-	print("Running Genetic Algo")
+
 	optimiser = StrategyOptimiser(
-		fitness_function,	
-		n_generations = 20, 
-		generation_size = 50,
-		n_genes = 5, 
-		gene_ranges=[(3, 15), (20, 80), (60, 100), (0, 40), (1005, 1100)], 
-		mutation_probability = 0.3, 
-		gene_mutation_probability = 0.5, 
-		n_select_best = 10
+		fitness_function=fitness_function,
+		n_generations=20,
+		generation_size=50,
+		n_genes=5,
+		gene_ranges=[(3, 40), (15, 80), (60, 100), (0, 40), (1004, 1150)],
+		mutation_probability=0.3,
+		gene_mutation_probability=0.5,
+		n_select_best=14
 	)
-	optimiser.run_genetic_algo()
 
-	print("Done running genetic algo.")
-
+	best_children = optimiser.run_genetic_algo()
+	pprint(best_children)
 
 if __name__ == '__main__':
 	Main()
