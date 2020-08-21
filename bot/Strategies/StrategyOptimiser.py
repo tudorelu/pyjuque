@@ -97,7 +97,7 @@ class StrategyOptimiser:
 
 										gene_dist = right_range - left_range
 										# gene_mid = gene_dist / 2
-										x = individual[i] + gene_dist / 3 * (2 * np.random.random() - 1)
+										x = individual[i] + gene_dist / 2 * (2 * np.random.random() - 1)
 
 										if x > right_range:
 												x = (x - left_range) % gene_dist + left_range
@@ -138,11 +138,12 @@ class StrategyOptimiser:
 				selected_parents_idx = list(costs_tmp.iloc[:n_best, 0])
 				selected_parents = [parent for idx, parent in enumerate(population) if idx in selected_parents_idx]
 
-				print('best is: {}, average: {}, and worst: {}'.format(
+				print('best: {}, average: {}, and worst: {}'.format(
 					costs_tmp[1].max(),
-					costs_tmp[1].mean(),
+					round(costs_tmp[1].mean(), 2),
 					costs_tmp[1].min()
 				))
+				print("best individual:", population[selected_parents_idx[0]])
 
 				return selected_parents
 
@@ -158,12 +159,10 @@ class StrategyOptimiser:
 				parent_gen = self.create_population(self.generation_size)
 				
 				for i in range(self.n_generations):
-						print("Generation:", i)
-						print("Selecting best")
+						print("Generation:", i, "Selecting best...")
 						parent_gen = self.select_best(parent_gen, self.n_select_best)
-						print("Mating parents")
+						print("Mating parents & Mutating children...")
 						parent_gen = self.mate_parents(parent_gen, self.generation_size)
-						print("Mutating children")
 						parent_gen = self.mutate_population(parent_gen)
 
 				best_children = self.select_best(parent_gen, 10)

@@ -11,10 +11,7 @@ from pandas import DataFrame
 
 from bot.Strategies.BBRSIStrategy import BBRSIStrategy
 from bot.Engine.Backtester import backtest
-from bot.Plotter import PlotData
 from bot.Utils import dotdict
-
-# from examples.strategy_optimiser_ga import *
 from bot.Strategies.StrategyOptimiser import StrategyOptimiser
 from pprint import pprint
 from decimal import Decimal
@@ -38,10 +35,10 @@ def Main():
 	symbol = "LTCUSDT"
 	binance = Binance()
 	sd = binance.SYMBOL_DATAS[symbol]
-	df = binance.getSymbolKlines(symbol, "1h", limit=1000)
-
+	df = binance.getSymbolKlines(symbol, "15m", limit=10000)
+	
 	def fitness_function(individual):
-  		pt = round(Decimal(int(individual[4])) / Decimal(1000), 3)
+		pt = round(Decimal(int(individual[4])) / Decimal(1000), 3)
 		entry_strategy.args = tuple(individual[0:4])
 		exit_settings.pt = pt
 		results = backtest(df, sd, binance, entry_strategy, entry_settings, exit_settings)
@@ -49,13 +46,13 @@ def Main():
 
 	optimiser = StrategyOptimiser(
 		fitness_function=fitness_function,
-		n_generations=20,
+		n_generations=30,
 		generation_size=50,
 		n_genes=5,
 		gene_ranges=[(3, 40), (15, 80), (60, 100), (0, 40), (1004, 1150)],
 		mutation_probability=0.3,
 		gene_mutation_probability=0.5,
-		n_select_best=14
+		n_select_best=15
 	)
 
 	best_children = optimiser.run_genetic_algo()

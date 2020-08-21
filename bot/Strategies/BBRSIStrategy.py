@@ -5,7 +5,7 @@ class BBRSIStrategy:
 		Params
 		--
 			`rsi_len` = length of RSI
-			`bb_len` = length of RBollinger Bands
+			`bb_len` = length of Bollinger Bands
 			`rsi_ob` = Overbought level of RSI	
 			`rsi_os` = Oversold level of RSI	
 	"""
@@ -24,30 +24,37 @@ class BBRSIStrategy:
 		self.df = df
 		AddIndicator(self.df, "rsi", "rsi", 'close', self.rsi_len)
 		AddIndicator(self.df, "lbb", "lbb", 'close', self.bb_len)
-		AddIndicator(self.df, "ubb", "ubb", 'close', self.bb_len)
+		# AddIndicator(self.df, "ema", "ema_80", 'close', 80)
+		# AddIndicator(self.df, "ema", "ema_300", 'close', 3000)
+		# AddIndicator(self.df, "ubb", "ubb", 'close', self.bb_len)
 
 
 	def getIndicators(self):
 		return [
 			dict(name="rsi", title="RSI", yaxis="y3"),
-			dict(name="lbb", title="Low Boll", color='gray'),
-			dict(name="ubb", title="Upper Boll", color='gray'),
+			dict(name="lbb", title="Low Boll"),
+			# dict(name="ema_80", title="EMA 80"),
+			# dict(name="ema_300", title="EMA 300"),
+			# dict(name="ubb", title="Upper Boll", color='gray'),
 		]
 
 	def checkBuySignal(self, i):
 		df = self.df
-		if (df["rsi"][i] > self.rsi_os) and \
+		if i > 1 and (df["rsi"][i] > self.rsi_os) and \
 			(df["rsi"][i-1] <= self.rsi_os) and \
-			(df['open'][i] < df["lbb"][i] < df['close'][i]):
+			(df['low'][i-1] < df["lbb"][i] < df['open'][i]) and \
+			df['close'][i] > df['lbb'][i]:
 			return df["close"][i]
-	
+			# (df['close'][i] > df['ema_300'][i]) and \
+			
 		return False
 		
 	def checkSellSignal(self, i):
 		df = self.df
-		if (df["rsi"][i] < self.rsi_ob) and \
+		if i > 1 and (df["rsi"][i] < self.rsi_ob) and \
 			(df["rsi"][i-1] >= self.rsi_ob) and \
-			(df["close"][i] < df["ubb"][i] < df["open"][i]):
+			(df["high"][i-1] > df["ubb"][i] > df["open"][i]) and \
+			df['close'][i] < df['ubb'][i]:
 			return df["close"][i]
 	
 		return False

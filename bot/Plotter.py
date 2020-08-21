@@ -35,6 +35,7 @@ def GetPlotData(df,
 			y = df['volume'], 
 			xaxis="x", 
 			yaxis="y2", 
+			width = 400000,
 			name = "Volume")
 
 		data = [volume]
@@ -48,13 +49,21 @@ def GetPlotData(df,
 			low = df['low'],
 			name = "Candlesticks")
 		data.append(candle)
-		
+	else:
+		price = go.Scatter( 
+			x = df['time'],
+			y = df['close'], 
+			name = 'Price',
+			line = dict(color = 'black'))
+
+		data.append(price)
+	
 	for ind in plot_indicators:
 		if df.__contains__(ind['name']):
 			if ind.get('showlegend', None) is None:
 				ind['showlegend'] = True
 			if ind.get('color', None) is None:
-				ind['color'] = 'rgba(102, 207, 255, 50)'
+				ind['color'] = None # 'rgba(102, 207, 255, 50)'
 			if ind.get('yaxis', None) is None:
 				ind['yaxis'] = 'y'
 			if ind.get('xaxis', None) is None:
