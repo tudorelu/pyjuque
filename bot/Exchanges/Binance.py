@@ -18,6 +18,7 @@ from bot.Exchanges.Base.Exceptions import \
 	InvalidCredentialsException, InternalExchangeException, ExchangeConnectionException
 
 class Binance(BaseExchange):
+	""" Wrapper around the Binance REST API """
 
 	ORDER_STATUS_NEW = 'NEW'
 	
