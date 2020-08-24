@@ -16,7 +16,7 @@ from bot.Strategies.AlwaysBuyStrategy import AlwaysBuyStrategy
 
 from bot.Exchanges.Binance import Binance
 
-def get_session(path='sqlite:///app.db'):
+def get_session(path='sqlite:///'):
 		some_engine = create_engine(path, echo=False)
 		Base.metadata.create_all(some_engine)
 		Session = sessionmaker(bind=some_engine)
@@ -52,7 +52,7 @@ def initialize_database(session):
 
 def Main():
 		""" """
-		session = get_session()
+		session = get_session('sqlite:///app.db')
 		# First time you run this, uncomment the next line
 		# initialize_database(session)
 		bot = session.query(Bot).filter_by(name='test_bot_3').first()

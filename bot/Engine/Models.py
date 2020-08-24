@@ -40,11 +40,11 @@ class Order(Base):
 		bot_id = db.Column(db.Integer, db.ForeignKey('bot.id'))
 		symbol = db.Column(db.String(13), index=True)
 		timestamp = db.Column(db.DateTime, index=True, default=datetime.now)
-		entry_price = db.Column(SqliteDecimal(9))
-		take_profit_price = db.Column(SqliteDecimal(9), default=None)
-		stop_loss_price = db.Column(SqliteDecimal(9), default=None)
-		original_quantity = db.Column(SqliteDecimal(9))
-		executed_quantity = db.Column(SqliteDecimal(9))
+		entry_price = db.Column(SqliteDecimal(13))
+		take_profit_price = db.Column(SqliteDecimal(13), default=None)
+		stop_loss_price = db.Column(SqliteDecimal(13), default=None)
+		original_quantity = db.Column(SqliteDecimal(13))
+		executed_quantity = db.Column(SqliteDecimal(13))
 		status = db.Column(db.String(30), index=True)
 		side = db.Column(db.String(30), index=True)
 		is_entry = db.Column(db.Boolean, default=True)
@@ -61,7 +61,7 @@ class Pair(Base):
 		symbol = db.Column(db.String(13), index=True)
 		active = db.Column(db.Boolean, default=True)
 		current_order_id = db.Column(db.Integer, db.ForeignKey('order.id'))
-		profit_loss = db.Column(SqliteDecimal(9), default=1)
+		profit_loss = db.Column(SqliteDecimal(13), default=1)
 
 class Bot(Base):
 		""""""
@@ -72,13 +72,13 @@ class Bot(Base):
 		is_running = db.Column(db.Boolean, default=False)
 		test_run = db.Column(db.Boolean, default=False)
 		quote_asset = db.Column(db.String(10), index=True)
-		starting_balance = db.Column(SqliteDecimal(9))
-		current_balance = db.Column(SqliteDecimal(9))
+		starting_balance = db.Column(SqliteDecimal(13))
+		current_balance = db.Column(SqliteDecimal(13))
 		
 		trade_allocation = db.Column(db.Integer, default=50)
 
-		profit_loss = db.Column(SqliteDecimal(9), default=100)
-		profit_target = db.Column(SqliteDecimal(9), default=100)
+		profit_loss = db.Column(SqliteDecimal(13), default=100)
+		profit_target = db.Column(SqliteDecimal(13), default=100)
 
 		# pairs = db.relationship('Pair', backref='bot', lazy='dynamic')
 		# orders = db.relationship('Order', backref='bot', lazy='dynamic')
