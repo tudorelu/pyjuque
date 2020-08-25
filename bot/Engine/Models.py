@@ -77,8 +77,9 @@ class Bot(Base):
 		
 		trade_allocation = db.Column(db.Integer, default=50)
 
-		profit_loss = db.Column(SqliteDecimal(13), default=100)
-		profit_target = db.Column(SqliteDecimal(13), default=100)
+		profit_loss = db.Column(db.Float, default=100)
+		profit_target = db.Column(SqliteDecimal(13), default=1)
+		stop_loss_target = db.Column(SqliteDecimal(13), default=90)
 
 		# pairs = db.relationship('Pair', backref='bot', lazy='dynamic')
 		# orders = db.relationship('Order', backref='bot', lazy='dynamic')

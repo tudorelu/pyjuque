@@ -174,8 +174,9 @@ class OrderManagement:
 						status = "NEW",
 						side = "SELL", 
 						is_entry = False, 
-						entry_price = Decimal(order.entry_price) * (Decimal(100) + Decimal(bot.profit_target))/Decimal(100), 
-						original_quantity=order.executed_quantity,
+						entry_price = Decimal(order.entry_price) * (Decimal(100) + bot.profit_target)/Decimal(100), 
+						stop_loss_price = Decimal(order.entry_price) * bot.stop_loss_target/Decimal(100), 
+						original_quantity = order.executed_quantity,
 						executed_quantity = 0,
 						is_closed = False, 
 						is_test = bot.test_run)
