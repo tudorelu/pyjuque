@@ -3,11 +3,11 @@ import sys
 
 curr_path = os.path.abspath(__file__)
 root_path = os.path.abspath(
-	os.path.join(curr_path, os.path.pardir, os.path.pardir, os.path.pardir))
+	os.path.join(curr_path, os.path.pardir, os.path.pardir))
 sys.path.insert(1, root_path)
 
 from bot.Engine import Models # pylint: disable=E0401
-from tests.helper_functions import get_session # pylint: disable=E0401
+from helper_functions import get_session # pylint: disable=E0401
 
 import unittest
 from unittest.mock import patch
