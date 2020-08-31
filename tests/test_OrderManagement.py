@@ -15,8 +15,8 @@ from alchemy_mock.mocking import AlchemyMagicMock
 # Testing Tools
 import unittest
 from mock import Mock
-from utils import timeit
-from helper_functions import get_session
+from tests.utils import timeit
+from tests.helper_functions import get_session
 from unittest.mock import patch
 from freezegun import freeze_time
 from copy import deepcopy
@@ -41,9 +41,9 @@ class OrderManagementTests(unittest.TestCase):
 	def setUp(self):	
 
 		self.exchange = Binance()
-		self.df_BTCUSD_1k = pd.read_csv(r'pyjuque/tests/data/BTCUSD_1m_1k.csv')
-		self.df_BTCUSD_10k = pd.read_csv(r'pyjuque/tests/data/BTCUSD_1m_10k.csv')
-		self.df_ADABTC_1k = pd.read_csv(r'pyjuque/tests/data/ADABTC_1m_1k.csv')
+		self.df_BTCUSD_1k = pd.read_csv('./tests/data/BTCUSD_1m_1k.csv')
+		self.df_BTCUSD_10k = pd.read_csv('./tests/data/BTCUSD_1m_10k.csv')
+		self.df_ADABTC_1k = pd.read_csv('./tests/data/ADABTC_1m_1k.csv')
 		
 		# define bot params
 		self.bot_name = 'ada_test_bot'

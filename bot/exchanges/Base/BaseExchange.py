@@ -61,7 +61,7 @@ class BaseExchange:
 		""" (NOT IMPLEMENTED) Cancels order given order id """
 		raise NotImplementedError
 
-	def getOrderInfo(self, *args, **kwargs):
+	def getOrder(self, *args, **kwargs):
 		""" (NOT IMPLEMENTED) Gets order info given order id """
 		raise NotImplementedError
 

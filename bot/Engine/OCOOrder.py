@@ -1,7 +1,8 @@
-import json, websocket, numpy
-from pprint import pprint
 
-#
+from uuid import uuid4
+from pprint import pprint
+from bot.Exchanges.Binance import Binance
+import json, websocket, numpy
 #	Entry Order - Simple Limit Order
 #	Exit Order - Complex OCO Order
 #	For OCO Order, the market needs to be checked periodically (websockets)
@@ -19,14 +20,15 @@ class OCOOrder:
 			self.exchange = exchange
 			self.stop_loss = stop_loss
 			self.take_profit = take_profit
-			
-			self.tp_sl_diff = take_profit - stop_loss
 
 			self.is_order_closed = False
 			self.is_order_placed = False
 			self.current_order_id = None
 			self.current_order_type = None
+			self.is_order_profitable = False
 			
+			self.tp_sl_diff = take_profit - stop_loss
+
 			SOCKET = "wss://stream.binance.com:9443/ws/ethusdt@kline_1m"
 			self.ws = websocket.WebSocketApp(SOCKET, on_open=self.on_open, on_close=self.on_close, on_message=self.on_message)
 			self.ws.run_forever()
@@ -52,14 +54,49 @@ class OCOOrder:
 					if self.current_order_id == self.ORDER_TYPE_SL:
 						# Stop Loss order was placed before.
 						# Check order with exchange to see if it was filled.
-						pass
+						order_info = self.exchange.getOrder(self.symbol, self.current_order_id)
+						if self.exchange.isValidResponse(order_info):
+  						# TODO Make such that we get an exchange Order object instead of a dict
+							if order_info['status'] == self.exchange.ORDER_STATUS_FILLED:
+								# Order was filled so OCO is CLOSED!
+								self.is_order_closed = True
+								self.is_order_profitable = False 
+
 					elif self.current_order_id == self.ORDER_TYPE_TP:
 						# Stop loss was hit, although take profit order was placed.
 						# Cancel TP Order and place market order to exit trade (at a loss).
-						pass
+						order_info = self.exchange.getOrder(self.symbol, self.current_order_id)
+						if self.exchange.isValidResponse(order_info):
+							# CHECK STATUS OF TP ORDER
+							if order_info['status'] in [self.exchange.ORDER_STATUS_NEW, \
+								self.exchange.ORDER_STATUS_PARTIALLY_FILLED]:
+  							# If not filled, cancel it
+								cancel_order_info = self.exchange.cancelOrder(self.symbol, self.current_order_id)
+								if self.exchange.isValidResponse(cancel_order_info):
+									order_id = uuid4()
+									quantity = self.quantity
+									if order_info['status'] == self.exchange.ORDER_STATUS_PARTIALLY_FILLED:
+										quantity = self.quantity - order_info['executedQty']
+									new_order = self.exchange.placeMarketOrder(
+										symbol=self.symbol, amount=quantity, side="SELL", custom_id=order_id)
+									if self.exchange.isValidResponse(new_order):
+										self.current_order_id = order_id
+										self.current_order_type = self.ORDER_TYPE_SL
+										self.is_order_placed = True
+
+							elif order_info['status'] == self.exchange.ORDER_STATUS_FILLED:
+								self.is_order_closed = True
+								self.is_order_profitable = True 
+						
 				else:
 					# An order was not placed before. Place a Market Order (at a loss)
-					pass
+					order_id = uuid4()
+					new_order = self.exchange.placeMarketOrder(
+						symbol=self.symbol, amount=self.quantity, side="SELL", custom_id=order_id)
+					if self.exchange.isValidResponse(new_order):
+						self.current_order_id = order_id
+						self.current_order_type = self.ORDER_TYPE_SL
+						self.is_order_placed = True
 			elif price >= self.take_profit:
 				# Take Profit Target was hit! Check if an order was placed before
 				if self.is_order_placed:
@@ -67,15 +104,48 @@ class OCOOrder:
 					if self.current_order_id == self.ORDER_TYPE_SL:
 						# TP was hit, although stop loss order was placed.
 						# Cancel SL Order and place market order (at a profit).
-						pass
+						order_info = self.exchange.getOrder(self.symbol, self.current_order_id)
+						if self.exchange.isValidResponse(order_info):
+							# CHECK STATUS OF TP ORDER
+							if order_info['status'] in [self.exchange.ORDER_STATUS_NEW, \
+								self.exchange.ORDER_STATUS_PARTIALLY_FILLED]:
+  							# If not filled, cancel it
+								cancel_order_info = self.exchange.cancelOrder(self.symbol, self.current_order_id)
+								if self.exchange.isValidResponse(cancel_order_info):
+									order_id = uuid4()
+									quantity = self.quantity
+									if order_info['status'] == self.exchange.ORDER_STATUS_PARTIALLY_FILLED:
+										quantity = self.quantity - order_info['executedQty']
+									new_order = self.exchange.placeMarketOrder(
+										symbol=self.symbol, amount=quantity, side="SELL", custom_id=order_id)
+									if self.exchange.isValidResponse(new_order):
+										self.current_order_id = order_id
+										self.current_order_type = self.ORDER_TYPE_SL
+										self.is_order_placed = True
+
+							elif order_info['status'] == self.exchange.ORDER_STATUS_FILLED:
+								self.is_order_closed = True
+								self.is_order_profitable = False 
 
 					elif self.current_order_id == self.ORDER_TYPE_TP:
 						# Check order with exchange to see if it was filled
 						# If it was, close connection, order was complete!
-						pass
+						order_info = self.exchange.getOrder(self.symbol, self.current_order_id)
+						if self.exchange.isValidResponse(order_info):
+  						# TODO Make such that we get an exchange Order object instead of a dict
+							if order_info['status'] == self.exchange.ORDER_STATUS_FILLED:
+								# Order was filled so OCO is CLOSED!
+								self.is_order_closed = True
+								self.is_order_profitable = True 
 				else:
 					# An order was not placed before. Place a Market Order to exit trade (for profit).
-					pass		
+					order_id = uuid4()
+					new_order = self.exchange.placeMarketOrder(
+						symbol=self.symbol, amount=self.quantity, side="SELL", custom_id=order_id)
+					if self.exchange.isValidResponse(new_order):
+						self.current_order_id = order_id
+						self.current_order_type = self.ORDER_TYPE_SL
+						self.is_order_placed = True
 			else:
 				# Current price is between take profit and stop loss prices.
 				if self.stop_loss < price <= self.stop_loss + self.tp_sl_diff * 0.33:
@@ -89,16 +159,16 @@ class OCOOrder:
 							# We don't have the right order placed, cancel current order and place a new one.
 							if self.current_order_id == None:
 								raise Exception("current_order_id is None despite an order appearing to be placed.")
-							cancel_response = exchange.cancelOrder(id=self.current_order_id)
-							if exchange.isValidResponse(cancel_response):
+							cancel_response = self.exchange.cancelOrder(self.symbol, self.current_order_id)
+							if self.exchange.isValidResponse(cancel_response):
 								# TODO: (Make use of DB persistency, get order_id from DB)
 								self.current_order_id = None
 								self.current_order_type = None
-								order_id = ""
-								response = exchange.placeLimitOrder(
-									symbol=self.symbol, quantity=self.quantity, 
-									side=self.side, price=self.stop_loss, custom_order_id=order_id)
-								if exchange.isValidResponse(response):
+								order_id = uuid4()
+								response = self.exchange.placeStopLossMarketOrder(
+									symbol=self.symbol, quantity=self.quantity, side=self.side, 
+									price=self.stop_loss, custom_order_id=order_id)
+								if self.exchange.isValidResponse(response):
 									self.current_order_id = order_id
 									self.current_order_type = self.ORDER_TYPE_SL
 							else:
@@ -111,10 +181,10 @@ class OCOOrder:
 					else:
 						# There's no order placed. Need to place a SL Order. 
 						# TODO: (Make use of DB persistency, get order_id from DB)
-						order_id = ""
-						response = exchange.placeLimitOrder(symbol=self.symbol, quantity=self.quantity, 
+						order_id = uuid4()
+						response = self.exchange.placeStopLossMarketOrder(symbol=self.symbol, quantity=self.quantity, 
 							side=self.side, price=self.stop_loss, custom_order_id=order_id)
-						if exchange.isValidResponse(response):
+						if self.exchange.isValidResponse(response):
 							self.current_order_id = order_id
 							self.current_order_type = self.ORDER_TYPE_SL
 				elif self.stop_loss + self.tp_sl_diff * 0.33 <= price <= self.stop_loss + self.tp_sl_diff * 0.66:
@@ -128,16 +198,16 @@ class OCOOrder:
 							# We don't have the right order placed, cancel current order and place a new one.
 							if self.current_order_id == None:
 								raise Exception("current_order_id is None despite an order appearing to be placed.")
-							cancel_response = exchange.cancelOrder(id=self.current_order_id)
-							if exchange.isValidResponse(cancel_response):
+							cancel_response = self.exchange.cancelOrder(self.symbol, self.current_order_id)
+							if self.exchange.isValidResponse(cancel_response):
 								# TODO: (Make use of DB persistency, get order_id from DB)
 								self.current_order_id = None
 								self.current_order_type = None
-								order_id = ""
-								response = exchange.placeLimitOrder(
-									symbol=self.symbol, quantity=self.quantity, 
-									side=self.side, price=self.take_profit, custom_order_id=order_id)
-								if exchange.isValidResponse(response):
+								order_id = uuid4()
+								response = self.exchange.placeTakeProfitMarketOrder(
+									symbol=self.symbol, quantity=self.quantity, side=self.side, 
+									price=self.take_profit, custom_order_id=order_id)
+								if self.exchange.isValidResponse(response):
 									self.current_order_id = order_id
 									self.current_order_type = self.ORDER_TYPE_TP
 							else:
@@ -153,10 +223,10 @@ class OCOOrder:
 					else:
 						# There's no order placed. Need to place a TP Order. 
 						# TODO: (Make use of DB persistency, get order_id from DB)
-						order_id = ""
-						response = exchange.placeLimitOrder(symbol=self.symbol, quantity=self.quantity, 
+						order_id = uuid4()
+						response = self.exchange.placeTakeProfitMarketOrder(symbol=self.symbol, quantity=self.quantity, 
 							side=self.side, price=self.take_profit, custom_order_id=order_id)
-						if exchange.isValidResponse(response):
+						if self.exchange.isValidResponse(response):
 							self.current_order_id = order_id
 							self.current_order_type = self.ORDER_TYPE_TP
 

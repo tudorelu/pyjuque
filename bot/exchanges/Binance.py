@@ -296,10 +296,6 @@ class Binance(BaseExchange):
 					Decides whether this will be a test order or not.
 
 		"""
-		
-		params['recvWindow'] = 5000
-		params['timestamp'] = int(round(time.time()*1000))
-		
 		self._signRequest(params)
 
 		if test: 
@@ -312,10 +308,7 @@ class Binance(BaseExchange):
 	def placeMarketOrder(self, symbol:str, amount:str, 
 	quote_amount, side:str, test:bool=False, 
  	round_up_amount=False, custom_id=False):
-		""" Places side (buy/sell) market order for amount of symbol.
-			Check this link for more info on the required parameters: 
-			https://github.com/binance-exchange/binance-official-api-docs/blob/master/rest-api.md#new-order--trade
-		"""
+		""" Places side (buy/sell) market order for amount of symbol.	"""
 
 		params = {
 			'symbol': symbol,
@@ -331,26 +324,15 @@ class Binance(BaseExchange):
 		if amount is not None:
 			params['quantity'] = format(Binance.toValidQuantity(symbol, 
 																		amount, round_up_amount), 'f')
-
 		elif quote_amount is not None:
 			params['quoteOrderQty'] = format(Binance.toValidQuantity(symbol, 
 																quote_amount, round_up_amount), 'f')
 
-		self._signRequest(params)
-		if test: 
-			url = Binance.BASE_URL + Binance.ENDPOINTS['testOrder']
-			return self._post(url, params=params, headers=self.headers)
-		
-		url = Binance.BASE_URL + Binance.ENDPOINTS['order']
-		return self._post(url, params=params, headers=self.headers)
+		return self.placeOrder(params, test)
 
-	def placeLimitOrder(self, symbol:str, price, amount, 
-	side:str, test:bool=False, round_up_price=False,
-	round_up_amount=False, custom_id=False):
-		""" Places side (buy/sell) limit order for amount of symbol at price.
-			Check this link for more info on the required parameters: 
-			https://github.com/binance-exchange/binance-official-api-docs/blob/master/rest-api.md#new-order--trade 
-		"""
+	def placeLimitOrder(self, symbol:str, price, amount, quote_amount, side:str, 
+	test:bool=False, round_up_price=False, round_up_amount=False, custom_id=False):
+		""" Places side (buy/sell) limit order for amount of symbol at price. """
 		params = {
 			'symbol': symbol,
 			'side': side,
@@ -367,14 +349,112 @@ class Binance(BaseExchange):
 		if amount is not None:
 			params['quantity'] = format(Binance.toValidQuantity(symbol, 
 																		amount, round_up_amount), 'f')
+		elif quote_amount is not None:
+			params['quoteOrderQty'] = format(Binance.toValidQuantity(symbol, 
+																quote_amount, round_up_amount), 'f')
 
-		self._signRequest(params)
-		if test: 
-			url = Binance.BASE_URL + Binance.ENDPOINTS['testOrder']
-			return self._post(url, params=params, headers=self.headers)
-		
-		url = Binance.BASE_URL + Binance.ENDPOINTS['order']
-		return self._post(url, params=params, headers=self.headers)
+		return self.placeOrder(params, test)
+
+	def placeStopLossMarketOrder(self, symbol:str, price, amount, quote_amount, side:str, 
+	test:bool=False, round_up_price=False, round_up_amount=False, custom_id=False):
+		""" Places a STOP_LOSS market order for amount of symbol at price. """
+		params = {
+			'symbol': symbol,
+			'side': side,
+			'type': Binance.ORDER_TYPE_STOP_LOSS,
+			'recvWindow': 5000,
+			'timeInForce': 'GTC',
+			'stopPrice': format(Binance.toValidPrice(symbol, price, round_up_price), 'f'),
+			'timestamp': int(round(time.time()*1000))
+		}
+				
+		if custom_id is not False:
+			params['newClientOrderId'] = custom_id
+		elif quote_amount is not None:
+			params['quoteOrderQty'] = format(Binance.toValidQuantity(symbol, 
+																quote_amount, round_up_amount), 'f')
+				
+		if amount is not None:
+			params['quantity'] = format(Binance.toValidQuantity(symbol, amount, round_up_amount), 'f')
+
+		return self.placeOrder(params, test)
+
+	def placeStopLossLimitOrder(self, symbol:str, price, stopPrice, amount, quote_amount, 
+	side:str, test:bool=False, round_up_price=False, round_up_amount=False, custom_id=False):
+		""" Places a STOP_LOSS_LIMIT market order for amount of symbol at price. """
+		params = {
+			'symbol': symbol,
+			'side': side,
+			'type': Binance.ORDER_TYPE_STOP_LOSS_LIMIT,
+			'recvWindow': 5000,
+			'timeInForce': 'GTC',
+			'price': format(Binance.toValidPrice(symbol, price, round_up_price), 'f'),
+			'stopPrice': format(Binance.toValidPrice(symbol, stopPrice, round_up_price), 'f'),
+			'timestamp': int(round(time.time()*1000))
+		}
+				
+		if custom_id is not False:
+			params['newClientOrderId'] = custom_id
+		elif quote_amount is not None:
+			params['quoteOrderQty'] = format(Binance.toValidQuantity(symbol, 
+																quote_amount, round_up_amount), 'f')
+				
+		if amount is not None:
+			params['quantity'] = format(Binance.toValidQuantity(symbol, 
+																		amount, round_up_amount), 'f')
+
+		return self.placeOrder(params, test)
+
+	def placeTakeProfitMarketOrder(self, symbol:str, price, amount, quote_amount, side:str, 
+	test:bool=False, round_up_price=False, round_up_amount=False, custom_id=False):
+		""" Places a STOP_LOSS market order for amount of symbol at price. """
+		params = {
+			'symbol': symbol,
+			'side': side,
+			'type': Binance.ORDER_TYPE_TAKE_PROFIT,
+			'recvWindow': 5000,
+			'timeInForce': 'GTC',
+			'stopPrice': format(Binance.toValidPrice(symbol, price, round_up_price), 'f'),
+			'timestamp': int(round(time.time()*1000))
+		}
+				
+		if custom_id is not False:
+			params['newClientOrderId'] = custom_id
+		elif quote_amount is not None:
+			params['quoteOrderQty'] = format(Binance.toValidQuantity(symbol, 
+																quote_amount, round_up_amount), 'f')
+				
+		if amount is not None:
+			params['quantity'] = format(Binance.toValidQuantity(symbol, amount, round_up_amount), 'f')
+
+		return self.placeOrder(params, test)
+
+	def placeTakeProfitLimitOrder(self, symbol:str, price, stopPrice, amount, quote_amount, 
+	side:str, test:bool=False, round_up_price=False, round_up_amount=False, custom_id=False):
+		""" Places a STOP_LOSS_LIMIT market order for amount of symbol at price. """
+		params = {
+			'symbol': symbol,
+			'side': side,
+			'type': Binance.ORDER_TYPE_TAKE_PROFIT_LIMIT,
+			'recvWindow': 5000,
+			'timeInForce': 'GTC',
+			'price': format(Binance.toValidPrice(symbol, price, round_up_price), 'f'),
+			'stopPrice': format(Binance.toValidPrice(symbol, stopPrice, round_up_price), 'f'),
+			'timestamp': int(round(time.time()*1000))
+		}
+				
+		if custom_id is not False:
+			params['newClientOrderId'] = custom_id
+		elif quote_amount is not None:
+			params['quoteOrderQty'] = format(Binance.toValidQuantity(symbol, 
+																quote_amount, round_up_amount), 'f')
+				
+		if amount is not None:
+			params['quantity'] = format(Binance.toValidQuantity(symbol, 
+																		amount, round_up_amount), 'f')
+
+		return self.placeOrder(params, test)
+
 
 	def cancelOrder(self, symbol, order_id):
 		""" Cancels order given order id """
@@ -388,7 +468,7 @@ class Binance(BaseExchange):
 		url = Binance.BASE_URL + Binance.ENDPOINTS['order']
 		return self._delete(url, self._signRequest(params), self.headers)
 
-	def getOrderInfo(self, symbol, order_id):
+	def getOrder(self, symbol, order_id):
 		""" Gets order info given order id """
 		params = {
 			'symbol': symbol,

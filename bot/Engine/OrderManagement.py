@@ -153,7 +153,7 @@ class OrderManagement:
 								session.commit()	
 								break
 			else:
-				exchange_order_info = exchange.getOrderInfo(symbol, order.id)
+				exchange_order_info = exchange.getOrder(symbol, order.id)
 				if not exchange.isValidResponse(exchange_order_info):
 					return
 				order.status = exchange_order_info['status']
