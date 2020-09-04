@@ -6,16 +6,15 @@ import time
 import pandas
 from decimal import Context, Decimal
 from traceback import print_exc
-
+import math
 import os
 import sys
 curr_path = os.path.abspath(__file__)
 root_path = os.path.abspath(os.path.join(curr_path, os.path.pardir, os.path.pardir))
 sys.path.append(root_path)
 
-from bot.Exchanges.Base.BaseExchange import BaseExchange
-from bot.Exchanges.Base.Exceptions import \
-	InvalidCredentialsException, InternalExchangeException, ExchangeConnectionException
+from bot.Exchanges.Base.BaseExchange import BaseExchange # pylint: disable=E0401
+from bot.Exchanges.Base.Exceptions import InvalidCredentialsException, InternalExchangeException, ExchangeConnectionException # pylint: disable=E0401
 
 class Binance(BaseExchange):
 
@@ -88,7 +87,7 @@ class Binance(BaseExchange):
 			data = json.loads(response.text)
 			data['url'] = url
 		except Exception as e:
-			print("Exception occured when trying to GET from "+url); 
+			print("Exception occured when trying to GET from "+url)
 			print_exc()
 			data = {'code': '-1', 'url':url, 'msg': e}
 		return data
@@ -100,7 +99,7 @@ class Binance(BaseExchange):
 			data = json.loads(response.text)
 			data['url'] = url
 		except Exception as e:
-			print("Exception occured when trying to POST to "+url); print(e); print("Params"); print(params);
+			print("Exception occured when trying to POST to "+url); print(e); print("Params"); print(params)
 			print_exc()
 			data = {'code': '-1', 'url':url, 'msg': e}
 		return data
@@ -112,7 +111,7 @@ class Binance(BaseExchange):
 			data = json.loads(response.text)
 			data['url'] = url
 		except Exception as e:
-			print("Exception occured when trying to DELETE from "+url); print(e); print("Params"); print(params);
+			print("Exception occured when trying to DELETE from "+url); print(e); print("Params"); print(params)
 			print_exc()
 			data = {'code': '-1', 'url':url, 'msg': e, 'params':params}
 		return data
@@ -329,11 +328,11 @@ class Binance(BaseExchange):
 			params['newClientOrderId'] = custom_id
 
 		if amount is not None:
-			params['quantity'] = format(Binance.toValidQuantity(symbol, 
+			params['quantity'] = format(self.toValidQuantity(symbol, 
 																		amount, round_up_amount), 'f')
 
 		elif quote_amount is not None:
-			params['quoteOrderQty'] = format(Binance.toValidQuantity(symbol, 
+			params['quoteOrderQty'] = format(self.toValidQuantity(symbol, 
 																quote_amount, round_up_amount), 'f')
 
 		self._signRequest(params)
@@ -357,7 +356,7 @@ class Binance(BaseExchange):
 			'type': Binance.ORDER_TYPE_LIMIT,
 			'recvWindow': 5000,
 			'timeInForce': 'GTC',
-			'price': format(Binance.toValidPrice(symbol, price, round_up_price), 'f'),
+			'price': format(self.toValidPrice(symbol, price, round_up_price), 'f'),
 			'timestamp': int(round(time.time()*1000))
 		}
 				
@@ -365,7 +364,7 @@ class Binance(BaseExchange):
 			params['newClientOrderId'] = custom_id
 				
 		if amount is not None:
-			params['quantity'] = format(Binance.toValidQuantity(symbol, 
+			params['quantity'] = format(self.toValidQuantity(symbol, 
 																		amount, round_up_amount), 'f')
 
 		self._signRequest(params)
@@ -437,66 +436,24 @@ class Binance(BaseExchange):
 		return p
 
 	@classmethod
-	def roundToValidPrice(cls, 
-	symbol_data, desired_price, round_up:bool=False) -> Decimal():
-		""" Returns the minimum quantity of a symbol we can buy, 
-		closest to desiredPrice """
-		
-		pr_filter = {}
-		
-		for fil in symbol_data["filters"]:
-			if fil["filterType"] == "PRICE_FILTER":
-				pr_filter = fil
-				break
-		
-		if not pr_filter.keys().__contains__("tickSize"):
-			raise Exception("Couldn't find tickSize or PRICE_FILTER in symbol_data.")
+	def _round_down_decimals(cls, number, decimals):
+		factor = 10 ** decimals
+		return math.floor(number * factor)/factor
 
-		round_off_by = int(cls._get10Factor((float(pr_filter["tickSize"]))))
-		number = round(Decimal(desired_price), round_off_by)
-		if round_up:
-			number = number + Decimal(pr_filter["tickSize"])
-
-		return number
-
-	@classmethod
-	def roundToValidQuantity(cls, 
-	symbol_data, desired_quantity, round_up:bool=False) -> Decimal():
-		""" Returns the minimum quantity of a symbol we can buy,
-		closest to desiredPrice """
-		
-		lot_filter = {}
-		
-		for fil in symbol_data["filters"]:
-			if fil["filterType"] == "LOT_SIZE":
-				lot_filter = fil
-				break
-		
-		if not lot_filter.keys().__contains__("stepSize"):
-			raise Exception("Couldn't find stepSize or PRICE_FILTER in symbol_data.")
-
-		round_off_by = int(cls._get10Factor((float(lot_filter["stepSize"]))))
-		number = round(Decimal(desired_quantity), round_off_by)
-		if round_up:
-			number = number + Decimal(lot_filter["stepSize"])
-
-		return number
-
-	@staticmethod
-	def toValidPrice(symbol, desired_price, round_up:bool=False) \
+	def toValidPrice(self, symbol, desired_price, round_up:bool=False) \
 		-> Decimal():
 		""" Returns the minimum quantity of a symbol we can buy, 
 		closest to desiredPrice """
 		
 		pr_filter = {}
-		
-		if not Binance.SYMBOL_DATAS.__contains__(symbol):
-			Binance._updateSymbolsData()
-			if not Binance.SYMBOL_DATAS.__contains__(symbol):
+
+		if not self.SYMBOL_DATAS.__contains__(symbol):
+			self._updateSymbolsData()
+			if not self.SYMBOL_DATAS.__contains__(symbol):
 				raise InternalExchangeException(\
 					"Could not find symbol data of "+symbol)
 
-		for fil in Binance.SYMBOL_DATAS[symbol]["filters"]:
+		for fil in self.SYMBOL_DATAS[symbol]["filters"]:
 			if fil["filterType"] == "PRICE_FILTER":
 				pr_filter = fil
 				break
@@ -512,8 +469,8 @@ class Binance(BaseExchange):
 
 		return number
 
-	@staticmethod
-	def toValidQuantity(symbol, desired_quantity, round_up:bool=False) \
+
+	def toValidQuantity(self, symbol, desired_quantity, round_up:bool=False) \
 		-> Decimal():
 		""" Returns the minimum quantity of a symbol we can buy,
 		closest to desiredPrice """
@@ -521,14 +478,14 @@ class Binance(BaseExchange):
 		lot_filter = {}
 
 		# Check whether SD exists
-		if not Binance.SYMBOL_DATAS.__contains__(symbol):
-			Binance._updateSymbolsData()
-			if not Binance.SYMBOL_DATAS.__contains__(symbol):
+		if not self.SYMBOL_DATAS.__contains__(symbol):
+			self._updateSymbolsData()
+			if not self.SYMBOL_DATAS.__contains__(symbol):
 				raise InternalExchangeException(\
 					"Could not find symbol data of "+symbol)
 
 		# Check the LOT SIZE filter on SD
-		for fil in Binance.SYMBOL_DATAS[symbol]["filters"]:
+		for fil in self.SYMBOL_DATAS[symbol]["filters"]:
 			if fil["filterType"] == "LOT_SIZE":
 				lot_filter = fil
 				break
@@ -537,12 +494,12 @@ class Binance(BaseExchange):
 			raise InternalExchangeException(\
 				"Couldn't find stepSize or PRICE_FILTER in symbol_data.")
 
-		round_off_by = int(Binance._get10Factor((float(lot_filter["stepSize"]))))
-		number = round(Decimal(desired_quantity), round_off_by)
+		decimals = int(self._get10Factor((float(lot_filter["stepSize"]))))
+		quantity = self._round_down_decimals(number = desired_quantity, decimals = decimals)
 		if round_up:
-			number = number + Decimal(lot_filter["stepSize"])
+			quantity = quantity + Decimal(lot_filter["stepSize"])
 
-		return number
+		return quantity
 
 
 	def updateSQLOrderModel(self, order, new_order_response, bot):
@@ -550,7 +507,7 @@ class Binance(BaseExchange):
 		new_order_response. Should be part of the exchange interface  """
 
 		if order.is_test:
-			order.take_profit_price = Binance.toValidPrice(
+			order.take_profit_price = self.toValidPrice(
 				symbol = order.symbol,
 				desired_price = Decimal(order.entry_price) * (Decimal(100) + Decimal(bot.profit_target))/Decimal(100), 
 				round_up=True)
@@ -558,7 +515,7 @@ class Binance(BaseExchange):
 		else:
 			order.timestamp = new_order_response['transactTime']
 			order.entry_price = new_order_response['price']
-			order.take_profit_price = Binance.toValidPrice(
+			order.take_profit_price = self.toValidPrice(
 				symbol = order.symbol,
 				desired_price = Decimal(new_order_response['price']) * Decimal(bot.profit_target), 
 				round_up=True)
