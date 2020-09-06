@@ -160,7 +160,7 @@ class OrderManagement:
 
 		# sell order was accepted by engine of exchange
 		if (order.side == 'SELL') & (order.status == exchange.ORDER_STATUS_NEW):
-			self.update_open_sell_order(order)
+			self.update_open_sell_order(order, pair)
 
 		# sell order was partially filled
 		if (order.side == 'SELL') & (order.status == exchange.ORDER_STATUS_PARTIALLY_FILLED):
