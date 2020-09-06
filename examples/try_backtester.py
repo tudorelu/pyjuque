@@ -50,9 +50,8 @@ def Main():
 	# Initialize exchanges and test
 	binance = Binance()
 	symbol = "LTCUSDT"
-	sd = binance.SYMBOL_DATAS[symbol]
 	df = binance.getSymbolKlines(symbol, "5m", limit=3000)
-	results = backtest(df, sd, binance, entry_strategy, entry_settings, exit_settings)
+	results = backtest(df, symbol, binance, entry_strategy, entry_settings, exit_settings)
 
 	pprint(results['total_profit_loss'])
 	strategy = entry_strategy.strategy_class(*entry_strategy.args)
