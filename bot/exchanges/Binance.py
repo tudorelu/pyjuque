@@ -407,7 +407,7 @@ class Binance(BaseExchange):
 
 	def placeTakeProfitMarketOrder(self, symbol:str, price, amount, quote_amount, side:str, 
 	test:bool=False, round_up_price=False, round_up_amount=False, custom_id=False):
-		""" Places a STOP_LOSS market order for amount of symbol at price. """
+		""" Places a TAKE_PROFIT market order for amount of symbol at price. """
 		params = {
 			'symbol': symbol,
 			'side': side,
