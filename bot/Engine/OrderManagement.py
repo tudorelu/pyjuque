@@ -1,7 +1,7 @@
 
 from bot.Exchanges.Binance import Binance
 from pandas import DataFrame
-import logging
+
 from traceback import print_exc
 
 from decimal import Decimal
@@ -44,7 +44,7 @@ class OrderManagement:
 			# 															failure (stop loss): Resume trading!
 			print("Checking orders state...")
 			for order in open_orders:
-					self.update_open_order(order)
+					self.try_exit_order(order)
 
 	def try_entry_order(self, pair):
 			""" Gets the latest market data and runs the strategy on it.
@@ -106,107 +106,6 @@ class OrderManagement:
 							print("ERROR placing order! on", symbol)
 							session.query(Order).filter(Order.id==order.id).delete()
 							session.commit()
-
-	def update_open_order(self, order):
-		""" Checks the status of an open order and tries to update the order """
-
-		exchange = self.exchange
-
-		# get info of order from exchange
-		exchange_order_info = exchange.getOrderInfo(order.symbol, order.id)
-
-		# check for valid response from exchange
-		if not exchange.isValidResponse(exchange_order_info):
-			logging.warning('Exchange order info could not be retrieved!')
-			return
-		
-		order_side = exchange_order_info['side']
-		order_status = exchange_order_info['status']
-		
-		# Order has been canceled by the user
-		if (order_side == 'BUY') & (order_status == exchange.ORDER_STATUS_CANCELED):
-			executed_quantity = exchange_order_info['executedQty']
-			self.handle_canceled_buy_order(order, executed_quantity)
-
-		# buy order was filled, place exit order.
-		if (order_side == 'BUY') & (order_status == exchange.ORDER_STATUS_FILLED):
-			self.try_exit_order(order)
-
-		# buy order has been accepted by engine
-		if (order_side == 'BUY') & (order_status == exchange.ORDER_STATUS_NEW):
-			self.update_open_buy_order(order)
-
-		# buy order that has been partially filled
-		if (order_side == 'BUY') & (order_status == exchange.ORDER_STATUS_PARTIALLY_FILLED):
-			executed_quantity = exchange_order_info['executedQty']
-			self.update_partially_filled_buy_order(order, executed_quantity)
-
-		# buy order was rejected, not processed by engine
-		if (order_side == 'BUY') & (order_status == exchange.ORDER_STATUS_REJECTED):
-			self.handle_rejected_buy_order(order)
-
-		# buy order expired, i.e. FOK orders with no fill or due to maintenance by exchange.
-		if (order_side == 'BUY') & (order_status == exchange.ORDER_STATUS_EXPIRED):
-			self.handle_expired_buy_order(order)
-
-		if (order_side == 'SELL') & (order_status == exchange.ORDER_STATUS_CANCELED):
-			executed_quantity = exchange_order_info['executedQty']
-			self.handle_canceled_buy_order(order, executed_quantity)
-
-		# sell order was filled
-		if (order_side == 'SELL') & (order_status == exchange.ORDER_STATUS_FILLED):
-			self.handle_filled_sell_order(order)
-
-		# sell order was accepted by engine of exchange
-		if (order_side == 'SELL') & (order_status == exchange.ORDER_STATUS_NEW):
-			self.update_open_sell_order(order)
-
-		# sell order was partially filled
-		if (order_side == 'SELL') & (order_status == exchange.ORDER_STATUS_PARTIALLY_FILLED):
-			executed_quantity = exchange_order_info['executedQty']
-			self.update_partially_filled_sell_order(order, executed_quantity)
-
-		# sell order was rejected by engine of exchange
-		if (order_side == 'SELL') & (order_status == exchange.ORDER_STATUS_REJECTED):
-			self.handle_rejected_sell_order(order)
-
-		# sell order expired, i.e. due to FOK orders or partially filled market orders
-		if (order_side == 'SELL') & (order_status == exchange.ORDER_STATUS_EXPIRED):
-			self.handle_expired_sell_order(order)
-
-	def handle_canceled_buy_order(self, order, executed_quantity):
-		""" Processes a canceled buy order. """
-		pair:Pair = self.bot.getPairWithSymbol(self.session, order.symbol)
-		if executed_quantity > 0:
-			# TODO process as filled buy order for executed amount.
-			pass
-		order.executed_quantity = executed_quantity
-		order.is_closed = True
-		pair.active = True
-		pair.current_order_id = None
-		self.session.commit()
-		
-	def update_open_buy_order(self, order):
-		exchange = self.exchange
-		strategy = self.strategy
-		df = exchange.getSymbolKlines(order.symbol, "5m", limit=100)
-		# TODO might want to make this refresh() s.t. only computes indicators for only new candles
-		strategy.setup(df)
-		# TODO create update_open_buy_order method in strategy
-		cancel_order = strategy.update_open_buy_order()
-		if cancel_order:
-			order_result = exchange.cancelOrder(order.symbol, order.id)
-			if exchange.isValidResponse(order_result):
-				self.handle_canceled_buy_order(order, order_result['executedQty'])
-
-	def update_partially_filled_buy_order(self, order, executed_quantity):
-		pass
-
-	def handle_rejected_buy_order(self, order):
-		pass
-	
-	def handle_expired_buy_order(self, order):
-		pass
 
 	def try_exit_order(self, order):
 			""" Checks whether the order has been filled or not. 
@@ -327,21 +226,3 @@ class OrderManagement:
 				pair.active = True
 				pair.current_order_id = None
 				session.commit()
-
-	def handle_canceled_sell_order(self, order):
-		pass
-
-	def update_open_sell_order(self, order):
-		pass
-
-	def update_partially_filled_sell_order(self, order, executed_quantity):
-		pass
-
-	def handle_rejected_sell_order(self, order):
-		pass
-	
-	def handle_expired_sell_order(self, order):
-		pass
-	
-	def handle_filled_sell_order(self, order):
-		pass
