@@ -343,37 +343,37 @@ class Binance(BaseExchange):
 		url = Binance.BASE_URL + Binance.ENDPOINTS['order']
 		return self._post(url, params=params, headers=self.headers)
 
-	def placeLimitOrder(self, symbol:str, price, amount, 
-	side:str, test:bool=False, round_up_price=False,
+	def placeLimitOrder(self, order, round_up_price=False,
 	round_up_amount=False, custom_id=False):
 		""" Places side (buy/sell) limit order for amount of symbol at price.
 			Check this link for more info on the required parameters: 
 			https://github.com/binance-exchange/binance-official-api-docs/blob/master/rest-api.md#new-order--trade 
 		"""
 		params = {
-			'symbol': symbol,
-			'side': side,
+			'symbol': order.symbol,
+			'side': order.side,
 			'type': Binance.ORDER_TYPE_LIMIT,
 			'recvWindow': 5000,
 			'timeInForce': 'GTC',
-			'price': format(self.toValidPrice(symbol, price, round_up_price), 'f'),
+			'price': format(self.toValidPrice(order.symbol, order.entry_price, round_up_price), 'f'),
 			'timestamp': int(round(time.time()*1000))
 		}
 				
-		if custom_id is not False:
-			params['newClientOrderId'] = custom_id
+		if hasattr(order, 'id'):
+			params['newClientOrderId'] = order.id
 				
-		if amount is not None:
-			params['quantity'] = format(self.toValidQuantity(symbol, 
-																		amount, round_up_amount), 'f')
+		if order.desired_quantity is not None:
+			params['quantity'] = format(self.toValidQuantity(order.symbol, 
+																		order.desired_quantity, round_up_amount), 'f')
 
 		self._signRequest(params)
-		if test: 
+		if order.is_test: 
 			url = Binance.BASE_URL + Binance.ENDPOINTS['testOrder']
 			return self._post(url, params=params, headers=self.headers)
 		
 		url = Binance.BASE_URL + Binance.ENDPOINTS['order']
 		return self._post(url, params=params, headers=self.headers)
+
 
 	def cancelOrder(self, symbol, order_id):
 		""" Cancels order given order id """
