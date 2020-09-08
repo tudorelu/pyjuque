@@ -9,17 +9,20 @@ from decimal import Decimal
 # 	If price approaches SL, We cancel TP Order and place SL
 # 	If price approaches TP, we cancel SL Order and place TP
 
+EXCHANGE_INVALID_RESPONSE = "Not a valid response from the exchange, try again next time..."
+
 class OCOOrder:
 	ORDER_TYPE_SL = "STOP_LOSS"
 	ORDER_TYPE_TP = "TAKE_PROFIT"
 
 	def __init__(self, exchange=None, symbol=None, quantity=None, side=None, stop_loss=None, take_profit=None):
 			""" Places an OCO Order on `exchange` """
+			self.side = side
 			self.symbol = symbol
 			self.quantity = quantity
 			self.exchange = exchange
-			self.stop_loss = stop_loss
-			self.take_profit = take_profit
+			self.stop_loss = self.exchange.toValidPrice(self.symbol.upper(), stop_loss)
+			self.take_profit = self.exchange.toValidPrice(self.symbol.upper(), take_profit)
 
 			self.is_order_closed = False
 			self.is_order_placed = False
@@ -27,28 +30,52 @@ class OCOOrder:
 			self.current_order_type = None
 			self.is_order_profitable = False
 			
-			self.tp_sl_diff = take_profit - stop_loss
+			self.tp_sl_diff = self.exchange.toValidPrice(self.symbol.upper(), (self.take_profit - self.stop_loss))
 
-			self.SOCKET = "wss://stream.binance.com:9443/ws/"+self.symbol.lower()+"@kline_1m"
-			self.ws = websocket.WebSocketApp(self.SOCKET, on_open=self.on_open, on_close=self.on_close, on_message=self.on_message)
-			self.ws.run_forever()
+			self.sl_plus_one_3_diff = self.exchange.toValidPrice(self.symbol.upper(), self.stop_loss + self.tp_sl_diff * Decimal(0.33))
+			self.sl_plus_two_3_diff = self.exchange.toValidPrice(self.symbol.upper(), self.stop_loss + self.tp_sl_diff * Decimal(0.66))
+
+			print("Placing an oco order for {} {}, stop loss at {} and take profit at {}".format(self.quantity, self.symbol, self.stop_loss, self.take_profit))
+
+	
+	def start(self):
+		self.socket_url = "wss://stream.binance.com:9443/ws/"+self.symbol.lower()+"@kline_1m"
+		self.ws = websocket.WebSocketApp(self.socket_url, on_open=self.on_open, on_close=self.on_close, on_message=self.on_message)
+		self.ws.run_forever()
 
 	def on_open(self):
 			print('opened connection on', symbol)
-			print()
 
 	def on_close(self):
 			print('closed connection')
 
 	def on_message(self, message):
 			
-			print('received message')
+			if self.is_order_closed:
+				print("OCO Order is closed!")
+				if self.is_order_profitable:
+					print("YAY! OCO order was profitable")
+				else:
+					print("NOO! OCO order was not profitable")
+				print("Information of exit order:")
+				order_info = self.exchange.getOrder(self.symbol, self.current_order_id)
+				pprint(order_info)
+				print("Closing down this websocket...")
+				self.ws.close()
+				return
+
+			print("\nStart message...")
 			json_message = json.loads(message)
 			# pprint(json_message)
 			candle = json_message['k']
 			price = Decimal(candle['c'])
 
-			print(r"Price {}, stop loss {}, take profit {}!".format(price, self.stop_loss, self.take_profit))
+			printable_price = self.exchange.toValidPrice(self.symbol.upper(), price)
+			
+			print(r"Price {}, stop loss {}, take profit {}, sl_tp_diff {}!".format(price, self.stop_loss, self.take_profit, self.tp_sl_diff))
+			# print(r"Stop loss + 1/3 * sl_tp_diff! {}".format(self.sl_plus_one_3_diff))
+			# print(r"Stop loss + 2/3 * sl_tp_diff! {}".format(self.sl_plus_two_3_diff))
+			# print(r"Stop loss + sl_tp_diff! {}".format(self.stop_loss + self.tp_sl_diff))
 
 			if price <= self.stop_loss:
 				# Stop Loss was hit
@@ -68,6 +95,8 @@ class OCOOrder:
 								print("Order was filled so OCO is CLOSED!")
 								self.is_order_closed = True
 								self.is_order_profitable = False 
+							else:
+								print("Waiting for order to fill, current status: {}".format(order_info['status']))
 
 					elif self.current_order_type == self.ORDER_TYPE_TP:
 						# Stop loss was hit, although take profit order was placed.
@@ -99,11 +128,15 @@ class OCOOrder:
 										self.current_order_type = self.ORDER_TYPE_SL
 										self.is_order_placed = True
 										print("Success placing Market order! New Order Id", self.current_order_id)
+									else:
+										print(EXCHANGE_INVALID_RESPONSE)
 
 							elif order_info['status'] == self.exchange.ORDER_STATUS_FILLED:
 								print("TP order filled! Success!")
 								self.is_order_closed = True
-								self.is_order_profitable = True 			
+								self.is_order_profitable = True 		
+							else:
+								print("Waiting for order to fill, current status: {}".format(order_info['status']))	
 				else:
 					# An order was not placed before. Place a Market Order (at a loss)
 					print("An order was not placed before. Place a Market Order (at a loss)")
@@ -116,6 +149,8 @@ class OCOOrder:
 						self.current_order_type = self.ORDER_TYPE_SL
 						self.is_order_placed = True
 						print("Success placing Market order! New Order Id", self.current_order_id)
+					else:
+						print(EXCHANGE_INVALID_RESPONSE)
 			elif price >= self.take_profit:
 				# Take Profit Target was hit! Check if an order was placed before
 				print("Take Profit was hit!!")
@@ -151,11 +186,15 @@ class OCOOrder:
 										self.current_order_type = self.ORDER_TYPE_SL
 										self.is_order_placed = True
 										print("Success placing Market order! New Order Id:", self.current_order_id)
+									else:
+										print(EXCHANGE_INVALID_RESPONSE)
 
 							elif order_info['status'] == self.exchange.ORDER_STATUS_FILLED:
 								print("SL order was filled :( Too bad...")
 								self.is_order_closed = True
 								self.is_order_profitable = False 
+							else:
+								print("Waiting for order to fill, current status: {}".format(order_info['status']))
 
 					elif self.current_order_type == self.ORDER_TYPE_TP:
 						# Check order with exchange to see if it was filled
@@ -170,6 +209,10 @@ class OCOOrder:
 								print("Order was filled so OCO is CLOSED!")
 								self.is_order_closed = True
 								self.is_order_profitable = True 
+							else:
+								print("Waiting for order to fill, current status: {}".format(order_info['status']))
+						else:
+							print(EXCHANGE_INVALID_RESPONSE)
 				else:
 					# An order was not placed before. Place a Market Order to exit trade (for profit).
 					print("An order was not placed before. Place a Market Order (for profit)")
@@ -182,11 +225,14 @@ class OCOOrder:
 						self.current_order_type = self.ORDER_TYPE_SL
 						self.is_order_placed = True
 						print("Success placing Market order! New Order Id:", self.current_order_id)
+					else:
+						print(EXCHANGE_INVALID_RESPONSE)
+			
 			else:
 				print("Current price is between take profit and stop loss prices.")
 				# Current price is between take profit and stop loss prices.
 				if self.stop_loss < price and price <= self.stop_loss + self.tp_sl_diff * Decimal(0.33):
-					print("Price {} closer to stop loss {} than take profit {}!".format(price, self.stop_loss, self.take_profit))
+					print("Price closer to stop loss than take profit !")
 					#	Price is within 1/3 distance of Stop Loss, we should have a stop loss order placed.
 					if self.is_order_placed:
 						# There's an order already placed. Is it the right one?
@@ -207,8 +253,8 @@ class OCOOrder:
 								self.current_order_type = None
 								order_id = uuid4()
 								response = self.exchange.placeStopLossMarketOrder(
-									symbol=self.symbol, quantity=self.quantity, side=self.side, 
-									price=self.stop_loss, custom_order_id=order_id)
+									symbol=self.symbol, amount=self.quantity, side=self.side, 
+									price=self.stop_loss, custom_id=order_id)
 								pprint(response)
 								if self.exchange.isValidResponse(response):
 									self.current_order_id = order_id
@@ -226,8 +272,9 @@ class OCOOrder:
 						# TODO: (Make use of DB persistency, get order_id from DB)
 						print("There's no order placed. Need to place a SL Order. ")
 						order_id = uuid4()
-						response = self.exchange.placeStopLossMarketOrder(symbol=self.symbol, quantity=self.quantity, 
-							side=self.side, price=self.stop_loss, custom_order_id=order_id)
+						print(order_id)
+						response = self.exchange.placeStopLossMarketOrder(symbol=self.symbol, amount=self.quantity, 
+							side=self.side, price=self.stop_loss, custom_id=order_id)
 						pprint(response)
 						if self.exchange.isValidResponse(response):
 							self.current_order_id = order_id
@@ -238,7 +285,7 @@ class OCOOrder:
 					print("Price is in the middle... Do Nothing.")
 				elif self.stop_loss + self.tp_sl_diff * Decimal(0.66) <= price and price < self.take_profit:
 					# Price is within 1/3 of take profit, we should have a take profit order placed.
-					print("Price {} closer to take profit {} than stop loss {} !".format(price, self.take_profit, self.stop_loss))
+					print("Price closer to take profit than stop loss !")
 					if self.is_order_placed:
 						# There's an order already placed. Is it the right one?
 						if self.current_order_type == self.ORDER_TYPE_SL:
@@ -255,8 +302,8 @@ class OCOOrder:
 								self.current_order_type = None
 								order_id = uuid4()
 								response = self.exchange.placeTakeProfitMarketOrder(
-									symbol=self.symbol, quantity=self.quantity, side=self.side, 
-									price=self.take_profit, custom_order_id=order_id)
+									symbol=self.symbol, amount=self.quantity, side=self.side, 
+									price=self.take_profit, custom_id=order_id)
 								pprint(response)
 								if self.exchange.isValidResponse(response):
 									self.current_order_id = order_id
@@ -278,10 +325,10 @@ class OCOOrder:
 					else:
 						# There's no order placed. Need to place a TP Order. 
 						# TODO: (Make use of DB persistency, get order_id from DB)
-						print("There's no order placed. Need to place a SL Order. ")
+						print("There's no order placed. Need to place a TP Order. ")
 						order_id = uuid4()
-						response = self.exchange.placeTakeProfitMarketOrder(symbol=self.symbol, quantity=self.quantity, 
-							side=self.side, price=self.take_profit, custom_order_id=order_id)
+						response = self.exchange.placeTakeProfitMarketOrder(symbol=self.symbol, amount=self.quantity, 
+							side=self.side, price=self.take_profit, custom_id=order_id)
 						pprint(response)
 						if self.exchange.isValidResponse(response):
 							self.current_order_id = order_id
@@ -289,3 +336,5 @@ class OCOOrder:
 							print("Success placing TP! New Order ID:", self.current_order_id)
 				else:
 					print("I don't even know....")
+			
+			print("End message...\n")
