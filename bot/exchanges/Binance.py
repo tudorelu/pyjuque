@@ -7,11 +7,17 @@ import pandas
 from decimal import Context, Decimal
 from traceback import print_exc
 import math
+
+# TODO some code is repeating below here, rewrite this
 import os
 import sys
 curr_path = os.path.abspath(__file__)
 root_path = os.path.abspath(os.path.join(curr_path, os.path.pardir, os.path.pardir))
 sys.path.append(root_path)
+from os.path import join, dirname
+from dotenv import load_dotenv
+load_dotenv(join(dirname(__file__), '../../.env'))
+# END TODO
 
 from bot.Exchanges.Base.BaseExchange import BaseExchange # pylint: disable=E0401
 from bot.Exchanges.Base.Exceptions import InvalidCredentialsException, InternalExchangeException, ExchangeConnectionException # pylint: disable=E0401
@@ -56,26 +62,31 @@ class Binance(BaseExchange):
 
 	SYMBOL_DATAS = dict()
 
-	def __init__(self, filename=None, api_key=None, secret_key=None):
+	def __init__(self, filename=None, api_key=None, secret_key=None, get_credentials_from_env=False):
 		
 		self.api_keys = None
 		self.has_credentials = False
 
 		self._updateSymbolsData()
 
-		# Adding credentials FROM FILE
-		if filename is not None:
-			file = open(filename, "r")
-			if file.mode == 'r':
-				contents = file.read().split('\n')
-				self.addCredentials(api_key = contents[0], secret_key=contents[1])
-			else:
-  				raise Exception("Can't read", filename, "make sure the file is readable!")
+		if get_credentials_from_env:
+			env_api_key = os.getenv('BINANCE_API_KEY')
+			env_secret_key = os.getenv('BINANCE_API_SECRET')
+			if env_api_key is not None and env_secret_key is not None:
+				self.addCredentials(env_api_key, env_secret_key)
+		else:
+			if filename is not None:
+				file = open(filename, "r")
+				if file.mode == 'r':
+					contents = file.read().split('\n')
+					self.addCredentials(api_key = contents[0], secret_key=contents[1])
+				else:
+					raise Exception("Can't read", filename, "make sure the file is readable!")
 		
 		# Adding credentials FROM API & SECRET KEYS passed through init
 		if self.has_credentials is False:
 			if api_key is not None and secret_key is not None:
-				self.addCredentials(api_key, secret_key)
+  				self.addCredentials(api_key, secret_key)
 
 		self.headers = dict()
 		# Adding required Headers if credentials exist
@@ -84,10 +95,14 @@ class Binance(BaseExchange):
 
 	def _get(self, url, params=None, headers=None):
 		""" Implements a get request for this exchange """
-		try: 
+		try:
 			response = requests.get(url, params=params, headers=headers)
-			data = json.loads(response.text)
-			data['url'] = url
+			payload = json.loads(response.text)
+			if type(payload) == type([]):
+				data = dict(payload=payload, url=url)
+			else:
+				data = payload
+				data['url'] = url
 		except Exception as e:
 			print("Exception occured when trying to GET from "+url)
 			print_exc()
@@ -156,7 +171,8 @@ class Binance(BaseExchange):
 		'recvWindow': 5000,
 		'timestamp': int(round(time.time()*1000))
 		}
-		return self._get(url, self._signRequest(params), self.headers)
+		self._signRequest(params)
+		return self._get(url, params, self.headers)
 
 	def getTradingSymbols(self, quote_assets:list=None):
 		""" Gets All symbols which are tradable (currently) 
@@ -297,20 +313,19 @@ class Binance(BaseExchange):
 					Decides whether this will be a test order or not.
 
 		"""
-		if verbose:
-			print("Placing Order with params:")
+
+		params['symbol'] = params['symbol'].upper()
 
 		self._signRequest(params)
-
-		if test: 
-			url = Binance.BASE_URL + Binance.ENDPOINTS['testOrder']
-			return self._post(url, params, self.headers)
-		
-		url = Binance.BASE_URL + Binance.ENDPOINTS['order']
 		
 		if verbose:
 			print("Placing Order with params:")
 			pprint(params)
+		
+		url = Binance.BASE_URL + Binance.ENDPOINTS['order']
+		if test: 
+			url = Binance.BASE_URL + Binance.ENDPOINTS['testOrder']
+
 		return self._post(url, params, self.headers)
 
 	def placeMarketOrder(self, symbol:str, side:str, amount:str, quote_amount=None, 
@@ -318,8 +333,9 @@ class Binance(BaseExchange):
 		""" Places side (buy/sell) market order for amount of symbol.	"""
 		if verbose:
 			print("Placing MarketOrder with params:")
+		
 		params = {
-			'symbol': symbol,
+			'symbol': symbol.upper(),
 			'side': side,
 			'type': Binance.ORDER_TYPE_MARKET,
 			'recvWindow': 5000,
@@ -336,7 +352,6 @@ class Binance(BaseExchange):
 			params['quoteOrderQty'] = format(self.toValidQuantity(symbol, 
 																quote_amount, round_up_amount), 'f')
 		if verbose:
-			print("Placing MarketOrder with params:")
 			pprint(params)
 			
 		return self.placeOrder(params, test)
@@ -346,8 +361,9 @@ class Binance(BaseExchange):
 		""" Places side (buy/sell) limit order for amount of symbol at price. """
 		if verbose:
 			print("Placing LimitOrder with params:")
+		
 		params = {
-			'symbol': symbol,
+			'symbol': symbol.upper(),
 			'side': side,
 			'type': Binance.ORDER_TYPE_LIMIT,
 			'recvWindow': 5000,
@@ -366,7 +382,6 @@ class Binance(BaseExchange):
 			params['quoteOrderQty'] = format(self.toValidQuantity(symbol, 
 																quote_amount, round_up_amount), 'f')
 		if verbose:
-			print("Placing LimitOrder with params:")
 			pprint(params)
 		return self.placeOrder(params, test)
 
@@ -375,12 +390,12 @@ class Binance(BaseExchange):
 		""" Places a STOP_LOSS market order for amount of symbol at price. """
 		if verbose:
 			print("Placing StopLossMarketOrder with params:")
+
 		params = {
-			'symbol': symbol,
+			'symbol': symbol.upper(),
 			'side': side,
 			'type': Binance.ORDER_TYPE_STOP_LOSS,
 			'recvWindow': 5000,
-			'timeInForce': 'GTC',
 			'stopPrice': format(self.toValidPrice(symbol, price, round_up_price), 'f'),
 			'timestamp': int(round(time.time()*1000))
 		}
@@ -396,7 +411,6 @@ class Binance(BaseExchange):
 																quote_amount, round_up_amount), 'f')
 
 		if verbose:
-			print("Placing StopLossMarketOrder with params:")
 			pprint(params)
 
 		return self.placeOrder(params, test)
@@ -408,7 +422,7 @@ class Binance(BaseExchange):
 			print("Placing StopLossLimitOrder with params:")
 
 		params = {
-			'symbol': symbol,
+			'symbol': symbol.upper(),
 			'side': side,
 			'type': Binance.ORDER_TYPE_STOP_LOSS_LIMIT,
 			'recvWindow': 5000,
@@ -429,7 +443,6 @@ class Binance(BaseExchange):
 																quote_amount, round_up_amount), 'f')
 
 		if verbose:
-			print("Placing StopLossLimitOrder with params:")
 			pprint(params)
 
 		return self.placeOrder(params, test)
@@ -441,11 +454,10 @@ class Binance(BaseExchange):
 			print("Placing TakeProfitMarketOrder with params:")
 		
 		params = {
-			'symbol': symbol,
+			'symbol': symbol.upper(),
 			'side': side,
 			'type': Binance.ORDER_TYPE_TAKE_PROFIT,
 			'recvWindow': 5000,
-			'timeInForce': 'GTC',
 			'stopPrice': format(self.toValidPrice(symbol, price, round_up_price), 'f'),
 			'timestamp': int(round(time.time()*1000))
 		}
@@ -460,7 +472,6 @@ class Binance(BaseExchange):
 																quote_amount, round_up_amount), 'f')
 
 		if verbose:
-			print("Placing TakeProfitMarketOrder with params:")
 			pprint(params)
 
 		return self.placeOrder(params, test)
@@ -473,7 +484,7 @@ class Binance(BaseExchange):
 			print("Placing TakeProfitLimitOrder with params:")
 			
 		params = {
-			'symbol': symbol,
+			'symbol': symbol.upper(),
 			'side': side,
 			'type': Binance.ORDER_TYPE_TAKE_PROFIT_LIMIT,
 			'recvWindow': 5000,
@@ -493,37 +504,54 @@ class Binance(BaseExchange):
 			params['quoteOrderQty'] = format(self.toValidQuantity(symbol, 
 																quote_amount, round_up_amount), 'f')
 
-
 		if verbose:
-			print("Placing TakeProfitLimitOrder with params:")
 			pprint(params)
 
 		return self.placeOrder(params, test)
 
 
-	def cancelOrder(self, symbol, order_id):
+	def cancelOrder(self, symbol, order_id, is_custom_id=False):
 		""" Cancels order given order id """
 		params = {
-			'symbol': symbol,
-			'orderId' : order_id,
+			'symbol': symbol.upper(),
 			'recvWindow': 5000,
 			'timestamp': int(round(time.time()*1000)) 
 		}
+		if is_custom_id:
+			params['origClientOrderId'] = order_id
+		else:
+			params['orderId'] = order_id
 
+		self._signRequest(params)
 		url = Binance.BASE_URL + Binance.ENDPOINTS['order']
-		return self._delete(url, self._signRequest(params), self.headers)
+		return self._delete(url, params, self.headers)
 
-	def getOrder(self, symbol, order_id):
+	def getOrder(self, symbol, order_id, is_custom_id=False):
 		""" Gets order info given order id """
 		params = {
-			'symbol': symbol,
-			'origClientOrderId' : order_id,
+			'symbol': symbol.upper(),
 			'recvWindow': 5000,
 			'timestamp': int(round(time.time()*1000)) 
 		}
+		if is_custom_id:
+			params['origClientOrderId'] = order_id
+		else:
+			params['orderId'] = order_id
 
+		self._signRequest(params)
 		url = Binance.BASE_URL + Binance.ENDPOINTS['order']
-		return self._get(url, self._signRequest(params), self.headers)
+		return self._get(url, params, self.headers)
+
+	def getAllOrders(self, symbol, limit=500):
+		""" Gets order info given order id """
+		params = {
+			'symbol': symbol.upper(),
+			'limit': limit,
+			'timestamp': int(round(time.time()*1000)) 
+		}
+		self._signRequest(params)
+		url = Binance.BASE_URL + Binance.ENDPOINTS['allOrders']
+		return self._get(url, params, self.headers)
 
 	@classmethod
 	def isValidResponse(cls, response:dict):
