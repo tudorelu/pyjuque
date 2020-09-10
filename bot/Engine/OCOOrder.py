@@ -60,274 +60,115 @@ class OCOOrder:
 
 	def on_open(self):
 		if self.verbose > 0:
-			print('opened connection on', symbol)
+			print('Opened connection on', self.symbol)
 
 	def on_close(self):
 		if self.verbose > 0:
-			print('closed connection')
+			print('Closed connection')
 
 	def on_message(self, message):
 
-			if self.verbose > 1:
-				print("\nStart message...")
+		json_message = json.loads(message)
+		candle = json_message['k']
+		price = Decimal(candle['c'])
 
-			json_message = json.loads(message)
-			# pprint(json_message)
-			candle = json_message['k']
-			price = Decimal(candle['c'])
+		if self.verbose > 0:
+			printable_price = self.exchange.toValidPrice(self.symbol.upper(), price)
+			print("Price {}, stop loss {}, take profit {}, sl_tp_diff {}!".format(
+				printable_price, 
+				self.stop_loss, 
+				self.take_profit, 
+				self.tp_sl_diff))
 
+		if price <= self.stop_loss:
+			# Stop Loss was hit 
 			if self.verbose > 0:
-				printable_price = self.exchange.toValidPrice(self.symbol.upper(), price)
-				print("Price {}, stop loss {}, take profit {}, sl_tp_diff {}!".format(
-					printable_price, 
-					self.stop_loss, 
-					self.take_profit, 
-					self.tp_sl_diff))
+				print("Stop Loss was hit!!")
 
-			if price <= self.stop_loss:
-				# Stop Loss was hit 
-				if self.verbose > 0:
-					print("Stop Loss was hit!!")
-					
-				if self.is_order_placed:
-
-					# An order was already placed before, what type was it?
-					if self.current_order_type == self.ORDER_TYPE_SL:
-						if self.verbose > 1:
-							print("Stop Loss order was placed before.")
-						# Stop Loss order was placed before.
-						# Check order with exchange to see if it was filled.
-						current_order_info = self.getCurrentOrderInfo()
-						if current_order_info is not False:
-							if current_order_info['status'] == self.exchange.ORDER_STATUS_FILLED:
-								# Order was filled so OCO is CLOSED!
-								if self.verbose > 1:
-									print("Order was filled so OCO is CLOSED!")
-								self.is_order_closed = True
-								self.is_order_profitable = False 
-							else:
-								if self.verbose > 1:
-									print("Waiting for order to fill, current status: {}".format(
-										current_order_info['status']))
-
-					elif self.current_order_type == self.ORDER_TYPE_TP:
-						# Stop loss was hit, although take profit order was placed.
-						# Cancel TP Order and place market order to exit trade (at a loss).
-						if self.verbose > 1:
-							print("Stop Loss hit but TP was placed before !?")
-						current_order_info = self.getCurrentOrderInfo()
-						if current_order_info is not False:
-							# CHECK STATUS OF TP ORDER
-							if current_order_info['status'] in [self.exchange.ORDER_STATUS_NEW, \
-								self.exchange.ORDER_STATUS_PARTIALLY_FILLED]:
-								# If not filled, cancel it
-								
-								cancel_order_info = self.exchange.cancelOrder(
-									self.symbol, 
-									self.current_order_id, 
-									is_custom_id=True)
-								
-								if self.verbose > 1:
-									print("If not filled, cancel it.")
-									pprint(cancel_order_info)
-								
-								if self.exchange.isValidResponse(cancel_order_info):
-									order_id = uuid4()
-									quantity = self.quantity
-									if current_order_info['status'] == self.exchange.ORDER_STATUS_PARTIALLY_FILLED:
-										sold_percentage = Decimal(current_order_info['executedQty'])/self.quantity
-										if self.verbose > 1:
-											print("Already sold some for a profit of {}%  (price: {})".format(
-												sold_percentage, 
-												Decimal(current_order_info['executedQty'])))
-
-										quantity = self.quantity - Decimal(current_order_info['executedQty'])
-
-									new_order = self.exchange.placeMarketOrder(
-										symbol=self.symbol, 
-										amount=quantity, 
-										side="SELL", 
-										custom_id=order_id,
-										verbose=self.verbose)
-
-									if self.verbose > 1:
-										print("Remaining quantity {} \nPlacing market order to get rid of this.".format(quantity))
-										pprint(new_order)
-
-									if self.exchange.isValidResponse(new_order):
-										self.current_order_id = order_id
-										self.current_order_type = self.ORDER_TYPE_SL
-										self.is_order_placed = True
-										if self.verbose > 1:
-											print("Success placing Market order! New Order Id", self.current_order_id)
-									else:
-										if self.verbose > 1:
-											print(EXCHANGE_INVALID_RESPONSE)
-
-							elif current_order_info['status'] == self.exchange.ORDER_STATUS_FILLED:
-								if self.verbose > 0:
-									print("TP order filled! Success!")
-								self.is_order_closed = True
-								self.is_order_profitable = True 		
-							else:
-								if self.verbose > 1:
-									print("Waiting for order to fill, current status: {}".format(current_order_info['status']))	
-				else:
-					# An order was not placed before. Place a Market Order (at a loss)
-
-					order_id = uuid4()
-					new_order = self.exchange.placeMarketOrder(
-						symbol=self.symbol, 
-						amount=self.quantity, 
-						side="SELL", 
-						custom_id=order_id,
-						verbose=self.verbose)
-					
-					if self.verbose > 1:
-						print("An order was not placed before. Place a Market Order (at a loss)")
-						pprint(new_order)
-					
-					if self.exchange.isValidResponse(new_order):
-						self.current_order_id = order_id
-						self.current_order_type = self.ORDER_TYPE_SL
-						self.is_order_placed = True
-						if self.verbose > 1:
-							print("Success placing Market order! New Order Id", self.current_order_id)
-					else:
-						if self.verbose > 1:
-							print(EXCHANGE_INVALID_RESPONSE)
-					
-			elif price >= self.take_profit:
-				# Take Profit Target was hit! Check if an order was placed before
-				if self.verbose > 0:
-					print("Take Profit was hit!!")
-				
-				if self.is_order_placed:
-					# Order was placed before, check what type it was
-					if self.current_order_type == self.ORDER_TYPE_SL:
-						# TP was hit, although stop loss order was placed.
-						# Cancel SL Order and place market order (at a profit).
-						if self.verbose > 1:
-							print("Stop Loss order was placed before, but TP was hit !?")
-						current_order_info = self.getCurrentOrderInfo()
-						if current_order_info is not False:
-							# CHECK STATUS OF TP ORDER
-							if current_order_info['status'] in [self.exchange.ORDER_STATUS_NEW, \
-								self.exchange.ORDER_STATUS_PARTIALLY_FILLED]:
-								# If not filled, cancel it
-								cancel_order_info = self.exchange.cancelOrder(self.symbol, self.current_order_id, is_custom_id=True)
-								if self.verbose > 1:
-									print("If not filled, cancel it.")
-									pprint(cancel_order_info)
-
-								if self.exchange.isValidResponse(cancel_order_info):
-									order_id = uuid4()
-									quantity = self.quantity
-									if current_order_info['status'] == self.exchange.ORDER_STATUS_PARTIALLY_FILLED:
-										sold_percentage = Decimal(current_order_info['executedQty'])/self.quantity
-										if self.verbose > 1:
-											print("Already sold some at a loss {}% (price {})".format(
-												sold_percentage, 
-												Decimal(current_order_info['executedQty'])))
-										quantity = self.quantity - current_order_info['executedQty']
-
-									new_order = self.exchange.placeMarketOrder(
-										symbol=self.symbol, 
-										amount=quantity, 
-										side="SELL", 
-										custom_id=order_id,
-										verbose=self.verbose)
-									
-									if self.verbose > 1:
-										print("Remaining quantity {} \n" +
-										"Placing market order to get rid of this.".format(quantity))
-										pprint(new_order)
-									
-									if self.exchange.isValidResponse(new_order):
-										self.current_order_id = order_id
-										self.current_order_type = self.ORDER_TYPE_SL
-										self.is_order_placed = True
-										if self.verbose > 1:
-											print("Success placing Market order! New Order Id:", self.current_order_id)
-									else:
-										if self.verbose > 1:
-											print(EXCHANGE_INVALID_RESPONSE)
-
-							elif current_order_info['status'] == self.exchange.ORDER_STATUS_FILLED:
-								if self.verbose > 1:
-									print("SL order was filled :( Too bad...")
-								self.is_order_closed = True
-								self.is_order_profitable = False 
-							else:
-								if self.verbose > 1:
-									print("Waiting for order to fill, " +
-									"current status: {}".format(current_order_info['status']))
-
-					elif self.current_order_type == self.ORDER_TYPE_TP:
-						# Check order with exchange to see if it was filled
-						# If it was, close connection, order was complete!
-						if self.verbose > 1:
-							print("Take Profit order was placed before.")
-
-						current_order_info = self.getCurrentOrderInfo()
-
-						if current_order_info is not False:
-							if current_order_info['status'] == self.exchange.ORDER_STATUS_FILLED:
-								# Order was filled so OCO is CLOSED!
-								if self.verbose > 1:
-									print("Order was filled so OCO is CLOSED!")
-								self.is_order_closed = True
-								self.is_order_profitable = True 
-							else:
-								if self.verbose > 1:
-									print("Waiting for order to fill, current status: {}".format(current_order_info['status']))
-						else:
-							if self.verbose > 1:
-								print(EXCHANGE_INVALID_RESPONSE)
-				else:
-					# An order was not placed before. Place a Limit Order to exit trade (for profit).
-
-					order_id = uuid4()
-					new_order = self.exchange.placeMarketOrder(
-						symbol=self.symbol, 
-						amount=self.quantity, 
-						side="SELL", 
-						custom_id=order_id,
-						verbose=self.verbose)
-
-					if self.verbose > 1:
-						print("An order was not placed before. Place a Market Order (for profit)")
-						pprint(new_order)
-				
-					if self.exchange.isValidResponse(new_order):
-						self.current_order_id = order_id
-						self.current_order_type = self.ORDER_TYPE_SL
-						self.is_order_placed = True
-						if self.verbose > 1:
-							print("Success placing Market order! New Order Id:", self.current_order_id)
-					else:
-						if self.verbose > 1:
-							print(EXCHANGE_INVALID_RESPONSE)
+			# An order was not placed before. Place a Market Order to exit trade (at a loss).
+			order_id = uuid4()
+			new_order = self.exchange.placeMarketOrder(
+				symbol=self.symbol, 
+				amount=self.quantity, 
+				side="SELL", 
+				custom_id=order_id,
+				verbose=self.verbose)
 			
+			if self.verbose > 1:
+				print("An order was not placed before. Place a Market Order (at a loss)")
+				pprint(new_order)
+			
+			if self.exchange.isValidResponse(new_order):
+				self.current_order_id = order_id
+				self.current_order_type = self.ORDER_TYPE_SL
+				self.is_order_placed = True
+				if self.verbose > 1:
+					print("Success placing Market order! New Order Id", self.current_order_id)
+			else:
+				if self.verbose > 1:
+					print(EXCHANGE_INVALID_RESPONSE)
+				
+		elif price >= self.take_profit:
+			# Take Profit Target was hit! Check if an order was placed before
 			if self.verbose > 0:
-				if self.is_order_placed:
-					print("Information of current order:")
-					current_order_info = self.getCurrentOrderInfo()
-					pprint(current_order_info)
+				print("Take Profit was hit!!")
+			
+			# An order was not placed before. Place a Market Order to exit trade (for profit).
+			order_id = uuid4()
+			new_order = self.exchange.placeMarketOrder(
+				symbol=self.symbol, 
+				amount=self.quantity, 
+				side="SELL", 
+				custom_id=order_id,
+				verbose=self.verbose)
 
-			if self.verbose > 0:
-				if self.is_order_closed:
-					print("OCO Order is closed!")
-					if self.is_order_profitable:
-						print("YAY! OCO order was profitable")
+			if self.verbose > 1:
+				print("An order was not placed before. Place a Market Order (for profit)")
+				pprint(new_order)
+		
+			if self.exchange.isValidResponse(new_order):
+				self.current_order_id = order_id
+				self.current_order_type = self.ORDER_TYPE_SL
+				self.is_order_placed = True
+				if self.verbose > 1:
+					print("Success placing Market order! New Order Id:", self.current_order_id)
+			else:
+				if self.verbose > 1:
+					print(EXCHANGE_INVALID_RESPONSE)
+		
+		if self.is_order_placed:
+			current_order_info = self.get_current_order_info()
+			if self.verbose > 0 and current_order_info:
+				print("Information of current order:")
+				pprint(current_order_info)
+
+			if current_order_info is not False:
+				if current_order_info['status'] == self.exchange.ORDER_STATUS_FILLED:
+					if self.verbose > 0:
+						print("Order was filled so OCO is officially CLOSED!")
+					self.is_order_closed = True
+					if self.current_order_type == self.ORDER_TYPE_SL:
+						self.is_order_profitable = False
 					else:
-						print("NOO! OCO order was not profitable")
-					print("Closing down this websocket...")
-					self.ws.close()
+						self.is_order_profitable = True
+				else:
+					if self.verbose > 0:
+						print("Waiting for order to fill, " +
+						"current status: {}".format(current_order_info['status']))
 
-				print("End message...\n")
 
-	def getCurrentOrderInfo(self):
+		if self.verbose > 0:
+			if self.is_order_closed:
+				if self.is_order_profitable:
+					print("YAY! OCO order was profitable :D")
+				else:
+					print("NOO! OCO order was not profitable :(")
+				print("Closing down this websocket.")
+				self.ws.close()
+
+			print("End message...\n")
+
+	def get_current_order_info(self):
 		order_info = self.exchange.getOrder(self.symbol, self.current_order_id, is_custom_id=True)
 		if self.exchange.isValidResponse(order_info):
 			return order_info
