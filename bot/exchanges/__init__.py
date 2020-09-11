@@ -1,2 +1,2 @@
 from bot.Exchanges.Base import *
-import bot.Exchanges.Binance.Binance as Binance
+from bot.Exchanges import Binance

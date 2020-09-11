@@ -4,17 +4,38 @@ from bot.Exchanges.Binance import Binance
 import json, websocket, numpy
 from decimal import Decimal
 
-#	Entry Order - Simple Limit Order
-#	Exit Order - Complex OCO Order
-#	For OCO Order, the market needs to be checked periodically (websockets)
-# 	If price approaches SL, We cancel TP Order and place SL
-# 	If price approaches TP, we cancel SL Order and place TP
+EXCHANGE_INVALID_MESSAGE = "Not a valid response from the exchange, try again next time..."
+CLOSING_WEBSOCKET_MESSAGE = "Closing down this websocket."
+ORDER_CLOSED_MESSAGE = "Order was filled so OCO is officially CLOSED!"
+ORDER_PROFITABLE_MESSAGE = "YES! OCO order was profitable :D"
+ORDER_NOT_PROFITABLE_MESSAGE = "NOO! OCO order was not profitable :("
+CURRENT_ORDER_INFO_MESSAGE = "Information of current order"
+PLACE_MARKET_ORDER_LOSS_MESSAGE = "Place a Market Order to exit trade at a loss."
+PLACE_MARKET_ORDER_PROFIT_MESSAGE = "Place a Market Order to exit trade at a profit."
+SL_HIT_MESSAGE = "Stop Loss Price was hit!!"
+TP_HIT_MESSAGE = "Take Profit Price was hit!!"
+SUCCESS_PLACING_ORDER_MESSAGE = "Success Placing Order!"
 
-EXCHANGE_INVALID_RESPONSE = "Not a valid response from the exchange, try again next time..."
+ORDER_TYPE_SL = "STOP_LOSS"
+ORDER_TYPE_TP = "TAKE_PROFIT"
 
 class OCOOrder:
-	ORDER_TYPE_SL = "STOP_LOSS"
-	ORDER_TYPE_TP = "TAKE_PROFIT"
+	"""
+		For OCO Order, the market needs to be checked periodically (websockets)
+		Simple Version:
+		--
+			If price crosses `SL_Price` or `TP_Price`, place market order
+			
+		Complex Version:
+		--
+			## NOT IMPLEMENTED ##
+			If price crosses `SL_Stop`
+			  * If there's a TP order placed, cancel it if not filled
+			  * Place a Stop Order at `SL_Price` with remaining funds
+			If price crosses `TP_Stop`
+			  * If there's a SL order placed, cancel it if not filled
+			  * Place a Limit Order at `TP_Price` with remaining funds
+	"""
 
 	def __init__(self, 
 		exchange=None, 
@@ -26,20 +47,18 @@ class OCOOrder:
 		verbose=False):
 			""" Places an OCO Order on `exchange` """
 			self.side = side
-			self.symbol = symbol
+			self.symbol = symbol.upper()
 			self.verbose = verbose
 			self.quantity = quantity
 			self.exchange = exchange
-			self.stop_loss = self.exchange.toValidPrice(self.symbol.upper(), stop_loss)
-			self.take_profit = self.exchange.toValidPrice(self.symbol.upper(), take_profit)
+			self.stop_loss = self.exchange.toValidPrice(self.symbol, stop_loss)
+			self.take_profit = self.exchange.toValidPrice(self.symbol, take_profit)
 
 			self.is_order_closed = False
 			self.is_order_placed = False
 			self.current_order_id = None
 			self.current_order_type = None
 			self.is_order_profitable = False
-			
-			self.tp_sl_diff = self.exchange.toValidPrice(self.symbol.upper(), (self.take_profit - self.stop_loss))
 			
 			if self.verbose > 0:
 				print("Placing an oco order for {} {}, stop loss at {} and take profit at {}".format(
@@ -73,100 +92,103 @@ class OCOOrder:
 		price = Decimal(candle['c'])
 
 		if self.verbose > 0:
-			printable_price = self.exchange.toValidPrice(self.symbol.upper(), price)
-			print("Price {}, stop loss {}, take profit {}, sl_tp_diff {}!".format(
+			printable_price = self.exchange.toValidPrice(self.symbol, price)
+			print("Price {}, stop loss {}, take profit {}.".format(
 				printable_price, 
 				self.stop_loss, 
-				self.take_profit, 
-				self.tp_sl_diff))
+				self.take_profit))
 
-		if price <= self.stop_loss:
+		if self.is_order_closed:
+			self.ws.close()
+
+		if not self.is_order_placed and price <= self.stop_loss:
 			# Stop Loss was hit 
 			if self.verbose > 0:
-				print("Stop Loss was hit!!")
+				print(SL_HIT_MESSAGE)
 
-			# An order was not placed before. Place a Market Order to exit trade (at a loss).
+			# Place a Market Order to exit trade (at a loss).
 			order_id = uuid4()
 			new_order = self.exchange.placeMarketOrder(
 				symbol=self.symbol, 
 				amount=self.quantity, 
 				side="SELL", 
 				custom_id=order_id,
-				verbose=self.verbose)
+				verbose=(self.verbose>1))
 			
 			if self.verbose > 1:
-				print("An order was not placed before. Place a Market Order (at a loss)")
+				print(PLACE_MARKET_ORDER_LOSS_MESSAGE)
 				pprint(new_order)
 			
 			if self.exchange.isValidResponse(new_order):
 				self.current_order_id = order_id
-				self.current_order_type = self.ORDER_TYPE_SL
+				self.current_order_type = ORDER_TYPE_SL
 				self.is_order_placed = True
 				if self.verbose > 1:
-					print("Success placing Market order! New Order Id", self.current_order_id)
+					print(SUCCESS_PLACING_ORDER_MESSAGE, 
+					" New Order Id is {}".format(self.current_order_id))
 			else:
 				if self.verbose > 1:
-					print(EXCHANGE_INVALID_RESPONSE)
+					print(EXCHANGE_INVALID_MESSAGE)
 				
-		elif price >= self.take_profit:
-			# Take Profit Target was hit! Check if an order was placed before
+		elif not self.is_order_placed and price >= self.take_profit:
+			# Take Profit Target was hit! 
 			if self.verbose > 0:
-				print("Take Profit was hit!!")
+				print(TP_HIT_MESSAGE)
 			
-			# An order was not placed before. Place a Market Order to exit trade (for profit).
+			# Place a Market Order to exit trade (for profit).
 			order_id = uuid4()
 			new_order = self.exchange.placeMarketOrder(
 				symbol=self.symbol, 
 				amount=self.quantity, 
 				side="SELL", 
 				custom_id=order_id,
-				verbose=self.verbose)
+				verbose=(self.verbose>1))
 
 			if self.verbose > 1:
-				print("An order was not placed before. Place a Market Order (for profit)")
+				print(PLACE_MARKET_ORDER_PROFIT_MESSAGE)
 				pprint(new_order)
-		
+
 			if self.exchange.isValidResponse(new_order):
 				self.current_order_id = order_id
-				self.current_order_type = self.ORDER_TYPE_SL
+				self.current_order_type = ORDER_TYPE_TP
 				self.is_order_placed = True
 				if self.verbose > 1:
-					print("Success placing Market order! New Order Id:", self.current_order_id)
+					print(SUCCESS_PLACING_ORDER_MESSAGE, 
+					" New Order Id is {}".format(self.current_order_id))
 			else:
 				if self.verbose > 1:
-					print(EXCHANGE_INVALID_RESPONSE)
+					print(EXCHANGE_INVALID_MESSAGE)
 		
 		if self.is_order_placed:
 			current_order_info = self.get_current_order_info()
-			if self.verbose > 0 and current_order_info:
-				print("Information of current order:")
-				pprint(current_order_info)
-
 			if current_order_info is not False:
+				if self.verbose > 0:
+					print(CURRENT_ORDER_INFO_MESSAGE)
+					pprint(current_order_info)
 				if current_order_info['status'] == self.exchange.ORDER_STATUS_FILLED:
 					if self.verbose > 0:
-						print("Order was filled so OCO is officially CLOSED!")
+						print(ORDER_CLOSED_MESSAGE)
 					self.is_order_closed = True
-					if self.current_order_type == self.ORDER_TYPE_SL:
+					if self.current_order_type == ORDER_TYPE_SL:
 						self.is_order_profitable = False
 					else:
 						self.is_order_profitable = True
 				else:
 					if self.verbose > 0:
-						print("Waiting for order to fill, " +
-						"current status: {}".format(current_order_info['status']))
+						print("Waiting for order to fill, current " +
+							"status: {}".format(current_order_info['status']))
 
+		if self.is_order_closed:
+			if self.verbose > 0:
+				if self.is_order_profitable:
+					print(ORDER_PROFITABLE_MESSAGE)
+				else:
+					print(ORDER_NOT_PROFITABLE_MESSAGE)
+				print(CLOSING_WEBSOCKET_MESSAGE)
+			self.ws.close()
 
 		if self.verbose > 0:
-			if self.is_order_closed:
-				if self.is_order_profitable:
-					print("YAY! OCO order was profitable :D")
-				else:
-					print("NOO! OCO order was not profitable :(")
-				print("Closing down this websocket.")
-				self.ws.close()
-
-			print("End message...\n")
+			print("\n")
 
 	def get_current_order_info(self):
 		order_info = self.exchange.getOrder(self.symbol, self.current_order_id, is_custom_id=True)
