@@ -51,6 +51,7 @@ class Order(Base):
 		is_closed = db.Column(db.Boolean, default=False)
 		matched_order_id = db.Column(db.Integer, db.ForeignKey('order.id'), default=None)
 		is_test = db.Column(db.Boolean)
+		order_type = db.Column(db.String(30), index = True)
 
 class Pair(Base):
 		""""""
