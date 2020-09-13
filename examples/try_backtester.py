@@ -54,7 +54,7 @@ def Main():
 	results = backtest(df, symbol, binance, entry_strategy, entry_settings, exit_settings)
 
 	pprint(results['total_profit_loss'])
-	strategy = entry_strategy.strategy_class(*entry_strategy.args)
+	strategy = entry_strategy.strategy_class(binance, *entry_strategy.args)
 	# strategy.setup(df)
 
 	signals=[

@@ -6,12 +6,13 @@ root_path = os.path.abspath(
 sys.path.append(root_path)
 
 from bot.Engine.Models import Base, Bot, Order, Pair
-from bot.Engine.OrderManagement import execute_bot
+from bot.Engine.OrderManagement import OrderManagement
 from pprint import pprint
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from bot.Strategies.BBRSIStrategy import BBRSIStrategy
+from bot.Strategies.EMAXStrategy import EMACrossover
 from bot.Strategies.AlwaysBuyStrategy import AlwaysBuyStrategy
 
 from bot.Exchanges.Binance import Binance
@@ -27,18 +28,18 @@ def initialize_database(session):
 		""" Function that initializes the database 
 		by creating a bot with two pairs. """
 		myobject = Bot(
-			name="test_bot_3",
+			name="test_bot_2",
 			quote_asset = 'BTC',
-			starting_balance = 1,
-			current_balance = 1,
+			starting_balance = 0.001,
+			current_balance = 0.001,
 			profit_target = 2,
-			test_run=True
+			test_run=False
 		)
 		session.add(myobject)
 		session.commit()
 		pair = Pair(
 			bot_id = myobject.id,
-			symbol = "ETHBTC",
+			symbol = "NEOBTC",
 			current_order_id = None
 		)
 		pair_2 = Pair(
@@ -51,22 +52,20 @@ def initialize_database(session):
 		session.commit()
 
 def Main():
-		""" """
-		session = get_session('sqlite:///app.db')
-		# First time you run this, uncomment the next line
-		# initialize_database(session)
-		bot = session.query(Bot).filter_by(name='test_bot_3').first()
-		exchange = Binance()
 
-		while True:
-				try:
-						execute_bot(
-							session=session, 
-							bot=bot, 
-							exchange=exchange, 
-							strategy=AlwaysBuyStrategy()) #BBRSIStrategy(8, 100, 60, 40))
-				except KeyboardInterrupt:
-						return
+    session = get_session('sqlite:///app.db')
+    # First time you run this, uncomment the next line
+    initialize_database(session)
+    bot = session.query(Bot).filter_by(name='test_bot_2').first()
+    exchange = Binance(filename=r'C:\Users\31614\Desktop\pyjuque\pyjuque\bot\Exchanges\credentials.txt')
+    strategy = AlwaysBuyStrategy(exchange)
+    om = OrderManagement(session, bot, exchange, strategy)
+    
+    while True:
+        try:
+            om.execute_bot()
+        except KeyboardInterrupt:
+                return
 
 
 if __name__ == '__main__':
