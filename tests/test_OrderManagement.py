@@ -15,10 +15,9 @@ from alchemy_mock.mocking import AlchemyMagicMock
 # Testing Tools
 import unittest
 from mock import Mock
-from utils import timeit
 from helper_functions import get_session
 from unittest.mock import patch
-from freezegun import freeze_time
+
 from copy import deepcopy
 
 # Other Tools
@@ -41,8 +40,6 @@ class OrderManagementTests(unittest.TestCase):
 	def setUp(self):	
 
 		self.exchange = Binance()
-		self.df_BTCUSD_1k = pd.read_csv(r'pyjuque/tests/data/BTCUSD_1m_1k.csv')
-		self.df_BTCUSD_10k = pd.read_csv(r'pyjuque/tests/data/BTCUSD_1m_10k.csv')
 		self.df_ADABTC_1k = pd.read_csv(r'pyjuque/tests/data/ADABTC_1m_1k.csv')
 		
 		# define bot params
@@ -67,7 +64,7 @@ class OrderManagementTests(unittest.TestCase):
 		self.order_1_id = 1
 		self.order_2_id = 2
 		self.order_symbol = self.symbol_eth
-		self.entry_price = 2
+		self.price = 2
 		self.original_quantity = 3
 		self.executed_quantity = 4
 		self.status = 'NEW'
@@ -110,7 +107,7 @@ class OrderManagementTests(unittest.TestCase):
 			id=self.order_1_id,
 			bot_id=self.bot_id,
 			symbol=self.order_symbol,
-			entry_price=self.entry_price,
+			price=self.price,
 			original_quantity=self.original_quantity,
 			executed_quantity=self.executed_quantity,
 			status=self.status,
@@ -123,7 +120,7 @@ class OrderManagementTests(unittest.TestCase):
 			id=self.order_2_id,
 			bot_id=self.bot_id,
 			symbol=self.order_symbol,
-			entry_price=self.entry_price,
+			price=self.price,
 			original_quantity=self.original_quantity,
 			executed_quantity=self.executed_quantity,
 			is_closed=self.is_closed,
@@ -143,7 +140,7 @@ class OrderManagementTests(unittest.TestCase):
 		self.bot = self.session.query(Bot).filter_by(name=self.bot_name).first()
 		self.eth_order = self.bot.getOpenOrders(self.session)[0]
 		self.eth_pair = self.bot.getPairWithSymbol(self.session, self.order_symbol)
-		self.strategy = EMACrossover(5, 30)
+		self.strategy = EMACrossover(5, 30, self.exchange)
 
 		self.om  = OrderManagement(
 								bot=self.bot, 
@@ -198,10 +195,12 @@ class OrderManagementTests(unittest.TestCase):
 		# Case where true buy signal is returned when test_run.
 		with patch('bot.Strategies.EMAXStrategy.EMACrossover.setup') as mockSetupStrategy:
 			with patch('bot.Strategies.EMAXStrategy.EMACrossover.checkBuySignal', return_value = True):
-				om_mock_database.try_entry_order(pair)
-				self.assertEqual(mockSetupStrategy.call_count, 1)
-				self.assertEqual(mock_session.add.call_count, 1)		
-				self.assertEqual(mock_session.commit.call_count, 2)					
+				with patch('bot.Exchanges.Binance.Binance.updateSQLOrderModel') as mock_updateSQLOrder:
+					om_mock_database.try_entry_order(pair)
+					self.assertEqual(mock_updateSQLOrder.call_count, 1)
+					self.assertEqual(mockSetupStrategy.call_count, 1)
+					self.assertEqual(mock_session.add.call_count, 1)		
+					self.assertEqual(mock_session.commit.call_count, 2)					
 
 		# Create deepcopy of bot object and set test_run to False
 		self.bot_not_test = deepcopy(self.bot)
@@ -447,35 +446,10 @@ class OrderManagementTests(unittest.TestCase):
 			self.assertEqual(self.eth_order.executed_quantity, 1)
 			self.assertEqual(mock_place_sell_order.call_count, 1)
 
-	@patch('bot.Engine.OrderManagement.create_order')
-	@patch('bot.Engine.OrderManagement.compute_quantity')
-	def test_update_partially_filled_sell_order(self, mock_compute_quantity, mock_create_order):
-		# Create mock sqlAlchemy session
-		mock_session = AlchemyMagicMock()
-		
-		# create mock orderManagement object with mock db session
-		om_mock_database = OrderManagement(
-										session=mock_session, 
-										bot=self.bot, 
-										exchange=self.exchange, 
-										strategy=self.strategy
-										)
-		self.eth_order.side = 'SELL'
-		
-		new_order = deepcopy(self.eth_order)
-		new_order.id = 1111
-		new_order.original_quantity = self.eth_order.original_quantity - self.eth_order.executed_quantity
-		mock_create_order.return_value = new_order
-
-		om_mock_database.update_partially_filled_sell_order(self.eth_order, self.eth_pair)
-		self.assertEqual(self.eth_order.is_closed, True)
-		self.assertEqual(self.eth_order.matched_order_id, 1111)
-		self.assertEqual(self.eth_pair.active, False)
-		self.assertEqual(self.eth_pair.current_order_id, 1111)	
-
-		self.assertEqual(mock_compute_quantity.call_count, 1)
-		self.assertEqual(mock_create_order.call_count, 1)
-		self.assertEqual(mock_session.add.call_count, 1)
+	@patch('bot.Engine.OrderManagement.update_partially_filled_sell_order')
+	def test_update_partially_filled_sell_order(self, mock_update_partially_filled_sell_order):
+		self.om.update_partially_filled_sell_order(self.eth_order, self.eth_pair)
+		self.assertEqual(mock_update_partially_filled_sell_order.call_count, 1)
 
 	@patch('bot.Engine.OrderManagement.try_exit_order')
 	def test_process_rejected_sell_order(self, mock_try_exit_order):
@@ -517,7 +491,7 @@ class OrderManagementTests(unittest.TestCase):
 		new_order.id = 1111
 		mock_create_order.return_value = new_order
 
-		order_response = dict(price = self.eth_order.entry_price)
+		order_response = dict(price = self.eth_order.price)
 		mock_placeLimitOrder.return_value = order_response
 
 		# Create mock sqlAlchemy session

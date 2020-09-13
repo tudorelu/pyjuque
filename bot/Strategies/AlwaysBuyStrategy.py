@@ -5,8 +5,9 @@ class AlwaysBuyStrategy:
 	Buys when low < close and sells when close > low
 	"""
 
-	def __init__(self):
+	def __init__(self, exchange):
 		""" """
+		self.exchange = exchange
 	
 	def setup(self, df):
 		self.df = df

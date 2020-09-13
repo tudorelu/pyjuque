@@ -1,4 +1,5 @@
-from bot.Indicators import AddIndicator
+from bot.Indicators import AddIndicator # pylint: disable=E0401
+import time
 
 class EMACrossover:
 
@@ -45,17 +46,27 @@ class EMACrossover:
 			return False
 
 	def update_open_sell_order(self, order):
+		""" 
+		Limit order example with market order stop-loss built in.
+		"""
 		update_sell_order = False
-		exit_params['order_type'] = order.order_type
-		if order.order_type == self.exchange.ORDER_TYPE_STOP_LOSS_LIMIT:
-			i = len(self.df) - 1
-			if df['close'].iloc[i] > order.take_profit_price:
-				update_sell_order = True
-				exit_params['stop_loss_price'] = order.take_profit_price
-				exit_params['take_profit_price'] =  1.02 * order.take_profit_price
-				exit_params['side'] = 'SELL'
-				exit_params['quantity'] = 
+		exit_params = dict()
 
-	
+		# Example of limit order with some sort of protection against severe market volatility.
+		if order.order_type == self.exchange.ORDER_TYPE_LIMIT:
+			i = len(self.df) - 1
+
+			# In case our position goes badly and declines by 5 % under buy price 
+			# we place market order to get rid of our position and control our losses.
+			if self.df['close'].iloc[i] < 0.95 * order.buy_price:
+				update_sell_order = True
+				exit_params['order_type'] = self.exchange.ORDER_TYPE_MARKET
+				
+		return update_sell_order, exit_params
+
 	def compute_exit_params(self, order):
-		pass
+		""" Return initial exit params, again we can make this as complicated as we want. """
+		exit_params = dict()
+		exit_params['order_type'] = self.exchange.ORDER_TYPE_LIMIT
+		exit_params['price'] = order.take_profit_price
+		return exit_params

@@ -47,9 +47,9 @@ class TestOrder(unittest.TestCase):
         self.assertEqual(order_table.bot_id, None)
         self.assertEqual(order_table.symbol, None)
         self.assertEqual(order_table.timestamp, None)
-        self.assertEqual(order_table.entry_price, None)
+        self.assertEqual(order_table.price, None)
         self.assertEqual(order_table.take_profit_price, None)
-        self.assertEqual(order_table.stop_loss_price, None)
+        self.assertEqual(order_table.stop_price, None)
         self.assertEqual(order_table.original_quantity, None)
         self.assertEqual(order_table.executed_quantity, None)
         self.assertEqual(order_table.status, None)
@@ -58,6 +58,7 @@ class TestOrder(unittest.TestCase):
         self.assertEqual(order_table.is_closed, None)
         self.assertEqual(order_table.matched_order_id, None)
         self.assertEqual(order_table.is_test, None)
+        self.assertEqual(order_table.order_type, None)
 
 
 class TestPair(unittest.TestCase):
@@ -190,7 +191,7 @@ class TestBot(unittest.TestCase):
             id=self.order_id,
             bot_id=self.bot_id,
             symbol=self.order_symbol,
-            entry_price=self.entry_price,
+            price=self.entry_price,
             original_quantity=self.original_quantity,
             executed_quantity=self.executed_quantity,
             status=self.status,
@@ -255,9 +256,9 @@ class TestBot(unittest.TestCase):
         self.assertEqual(eth_btc_order.id,self.order_id)
         self.assertEqual(eth_btc_order.bot_id,self.bot_id)
         self.assertEqual(eth_btc_order.symbol,self.symbol_eth)
-        self.assertEqual(eth_btc_order.entry_price,self.entry_price)
+        self.assertEqual(eth_btc_order.price,self.entry_price)
         self.assertEqual(eth_btc_order.take_profit_price,None)
-        self.assertEqual(eth_btc_order.stop_loss_price,None)
+        self.assertEqual(eth_btc_order.stop_price,None)
         self.assertEqual(eth_btc_order.original_quantity,self.original_quantity)
         self.assertEqual(eth_btc_order.executed_quantity,self.executed_quantity)
         self.assertEqual(eth_btc_order.status,self.status)

@@ -11,7 +11,7 @@ sys.path.insert(1, root_path)
 
 # Import all Created exchanges here
 from bot.Exchanges.Binance import Binance
-from utils import timeit
+from tests.utils import timeit
 from pandas import DataFrame
 
 class BinanceTests(unittest.TestCase):

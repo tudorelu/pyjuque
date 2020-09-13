@@ -1,4 +1,6 @@
 import logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 from traceback import print_exc
 from decimal import Decimal
 
@@ -17,29 +19,29 @@ class OrderManagement:
 			""" The main execution loop of the bot """
 
 			# Step 1: Retreive all pairs for a particular bot
-			print("Getting active pairs:")
+			logger.info("Getting active pairs:")
 			active_pairs = self.bot.getActivePairs(self.session)
-			print("Number of active_pairs: ", len(active_pairs))
+			logger.info("Number of active_pairs: {}".format(len(active_pairs)))
 
 			# Step 2 For Each Pair:
 			#		Retreive current market data 
 			# 	Compute Indicators & Check if Strategy is Fulfilled
 			#		IF Fulfilled, palce order (Save order in DB)
-			print("Checking signals on pairs...")
+			logger.info("Checking signals on pairs...")
 			for pair in active_pairs:
 					self.try_entry_order(pair)
 
 			# Step 3: Retreive all open orders on the bot
-			print("Getting open orders:")
+			logger.info("Getting open orders:")
 			open_orders = self.bot.getOpenOrders(self.session)
-			print("Number of open orders: ", len(open_orders))
+			logger.info("Number of open orders: {}".format(len(open_orders)))
 
 			# Step 4: For Each order that was already placed by the bot 
 			# and was not filled before, check status:
 			#		IF Filled -> If entry order, place exit order
 			#							-> If exit order, success (take profit), or 
 			# 															failure (stop loss): Resume trading!
-			print("Checking orders state...")
+			logger.info("Checking orders state...")
 			for order in open_orders:
 					self.update_open_order(order)
 
@@ -53,7 +55,7 @@ class OrderManagement:
 			strategy = self.strategy
 
 			symbol = pair.symbol
-			print("Checking signal on", symbol)
+			logger.info("Checking signal on {}".format(symbol))
 			df = exchange.getSymbolKlines(symbol, "5m", limit=100)
 			l = len(df) - 1
 			strategy.setup(df)
@@ -61,7 +63,7 @@ class OrderManagement:
 			
 			if buy_signal:
 					
-					print("BUY! on", symbol)
+					logger.info("BUY! on {}".format(symbol))
 					desired_price = Decimal(df['close'][l])
 					quote_qty =  Decimal(bot.starting_balance) * Decimal(bot.trade_allocation) / Decimal(100)
 					desired_quantity = quote_qty / desired_price
@@ -71,7 +73,7 @@ class OrderManagement:
 							status = "NEW", 
 							side = "BUY", 
 							is_entry = True, 
-							entry_price=desired_price, 
+							price=desired_price, 
 							original_quantity = desired_quantity,
 							executed_quantity = 0,
 							is_closed = False, 
@@ -92,14 +94,14 @@ class OrderManagement:
 									custom_id=order.id)
 
 					if exchange.isValidResponse(order_response):
-							print("SUCCESSFUL ORDER! on", symbol)
+							logger.info("SUCCESSFUL ORDER! on {}".format(symbol))
 							bot.current_balance = bot.current_balance - quote_qty
 							exchange.updateSQLOrderModel(order, order_response, bot)
 							pair.current_order_id = order.id
 							pair.active = False
 							session.commit()
 					else:
-							print("ERROR placing order! on", symbol)
+							logger.warn('Error placing order, exchange info: {}'.format(order_response))
 							session.query(Order).filter(Order.id==order.id).delete()
 							session.commit()
 
@@ -115,7 +117,7 @@ class OrderManagement:
 
 		# check for valid response from exchange
 		if not exchange.isValidResponse(exchange_order_info):
-			logging.warning('Exchange order info could not be retrieved!')
+			logging.warning('Exchange order info could not be retrieved!, message from exchange: {}'.format(exchange_order_info))
 			return
 		
 		# update order params.
@@ -177,8 +179,10 @@ class OrderManagement:
 		""" 
 		Processes a canceled buy order. 
 		"""
+		# If the order was partially filled before it was cancelled. Place exit order for this part.
 		if order.executed_quantity > 0:
 			self.try_exit_order(order, pair) 
+		# else close order and set pair to active so we can start looking for buy orders again
 		else:
 			order.is_closed = True
 			pair.active = True
@@ -186,16 +190,16 @@ class OrderManagement:
 		
 	def update_open_buy_order(self, order, pair):
 		"""
-		updates an open buy order based on given strategy
+		Looks to close an open buy order based on strategy specified in strategies.
 		"""
 		exchange = self.exchange
 		strategy = self.strategy
-		# TODO probably also want to get limit and time interval from settings file.
+		# TODO probably want to get limit and time interval from settings/strategy module in the future.
 		candlestick_data = exchange.getSymbolKlines(order.symbol, "5m", limit=100)
 		# TODO might want to make this refresh() s.t. only computes indicators for only new candles
 		strategy.setup(candlestick_data)
-		# TODO create update_open_buy_order method in strategy, can contain different logic for partially filled orders.
 		cancel_order = strategy.update_open_buy_order(order)
+		
 		if cancel_order:
 			order_result = exchange.cancelOrder(order.symbol, order.id)
 			if exchange.isValidResponse(order_result):
@@ -206,8 +210,9 @@ class OrderManagement:
 	def process_rejected_buy_order(self, order, pair):
 		""" 
 		The order was not accepted by the engine and not processed. 
-		Therefore, delete the order from the database. 
+		Therefore, close the order and set pair to active again. 
 		"""
+		logger.warn('Order was rejected by exchange!')
 		order.is_closed = True
 		pair.active = True
 		pair.current_order_id = None
@@ -227,9 +232,8 @@ class OrderManagement:
 		
 	def process_canceled_sell_order(self, order, pair):
 		"""
-		Process a canceled sell order.
-		Redundant I think, status is only CANCELED IF CANCELED BY USER.
-		Probably still want user to be able to interfere manually.
+		Process a canceled sell order. By replacing a new sell order. 
+		Since we want all our assets to return to our quote asset eventually.
 		"""
 		self.try_exit_order(order, pair)
 	
@@ -245,6 +249,10 @@ class OrderManagement:
 		
 		update_sell_order, exit_params = strategy.update_open_sell_order(order)
 
+		# These exit params are fixed, therefore specify it in ordermanagement.
+		exit_params['side'] = 'SELL'
+		exit_params['quantity'] = self.compute_quantity(order)
+
 		if update_sell_order:
 			order_result = exchange.cancelOrder(order.symbol, order.id)
 			if exchange.isValidResponse(order_result):
@@ -254,24 +262,11 @@ class OrderManagement:
 	
 	def update_partially_filled_sell_order(self, order, pair):
 		"""
-		Update partially filled sell order based on given strategy.
-		Close partially filled part as closed order and create new order 
-		with status 'NEW' with quantity that was not yet filled
+		update open sell order handles partially filled orders,
+		kept it as a separate method because maybe we would like to add
+		some extra logic later here.
 		"""
-		exit_params = dict()
-		exit_params['quantity'] = self.compute_quantity(order)
-		exit_params['side'] = order.side
-		exit_params['entry_price'] = order.entry_price
-		exit_params['stop_loss_price'] = order.stop_loss_price
-		exit_params['order_type'] = order.order_type
-
-		new_sell_order = self.create_order(order.symbol, exit_params)
-
-		order.is_closed = True
-		order.matched_order_id = new_sell_order.id
-		pair.active = False
-		pair.current_order_id = new_sell_order.id
-		self.session.add(new_sell_order)		
+		self.update_open_sell_order(order, pair)		
 
 	def process_rejected_sell_order(self, order, pair):
 		"""
@@ -295,6 +290,11 @@ class OrderManagement:
 	
 	def try_exit_order(self, order, pair):
 
+		if order.side == 'BUY':
+			buy_price = order.price
+		if order.side == 'SELL':
+			buy_price = order.buy_price
+
 		symbol = order.symbol
 		exchange = self.exchange
 		strategy = self.strategy
@@ -302,9 +302,12 @@ class OrderManagement:
 		candlestick_data  = exchange.getSymbolKlines(symbol, '5m', 100)
 		strategy.setup(candlestick_data)
 
-		# TODO strategy class needs to take status etc in to account when computing exit params
 		exit_params = strategy.compute_exit_params(order)
+
+		# Fixed exit parameters user does not have to determine.
 		exit_params['quantity'] = self.compute_quantity(order)
+		exit_params['side'] = 'SELL'
+		exit_params['buy_price'] = buy_price
 
 		self.place_sell_order(exit_params, order, pair)
 		
@@ -323,10 +326,12 @@ class OrderManagement:
 			new_order_response = dict()
 			
 			if exit_params['order_type'] == exchange.ORDER_TYPE_LIMIT:
-				new_order_response = self.exchange.placeLimitOrder(new_order_model)
+				new_order_response = self.exchange.placeLimitOrder(new_order_model.symbol, new_order_model.price, new_order_model.side, new_order_model.original_quantity)
 			if exit_params['order_type'] == exchange.ORDER_TYPE_MARKET:
-				new_order_response = self.exchange.placeMarketOrder(new_order_model)
-
+				new_order_response = self.exchange.placeMarketOrder(new_order_model.symbol, new_order_model.side, new_order_model.original_quantity)
+			if exit_params['order_type'] == exchange.ORDER_TYPE_STOP_LOSS_LIMIT:
+				new_order_response = self.exchange.placeStopLossLimitOrder(new_order_model.symbol, new_order_model.price, new_order_model.stop_price, new_order_model.side, new_order_model.original_quantity)
+			
 			if exchange.isValidResponse(new_order_response):
 				exchange.updateSQLOrderModel(new_order_model, new_order_response, bot)
 				new_order_model.matched_order_id = order.id
@@ -353,13 +358,43 @@ class OrderManagement:
 									status = "NEW",
 									side = exit_params['side'], 
 									is_entry = False, 
-									entry_price = exit_params['entry_price'], 
-									stop_loss_price = exit_params['stop_loss_price'], 
+									price = exit_params['price'], 
+									buy_price = exit_params['buy_price'],
 									original_quantity = exit_params['quantity'],
 									executed_quantity = 0,
 									is_closed = False, 
 									is_test = bot.test_run,
-									order_type = exit_params['order_type'])
+									order_type = self.exchange.ORDER_TYPE_LIMIT)
+		if exit_params['order_type'] == self.exchange.ORDER_TYPE_STOP_LOSS_LIMIT:
+			new_order_model = Order(
+									bot_id = bot.id,
+									symbol = symbol,
+									status = "NEW",
+									side = exit_params['side'], 
+									is_entry = False, 
+									price = exit_params['price'],
+									buy_price = exit_params['buy_price'],
+									stop_price = exit_params['stop_price'],
+									original_quantity = exit_params['quantity'],
+									executed_quantity = 0,
+									is_closed = False, 
+									is_test = bot.test_run,
+									order_type = self.exchange.ORDER_TYPE_STOP_LOSS_LIMIT
+			)
+		if exit_params['order_type'] == self.exchange.ORDER_TYPE_MARKET:
+			new_order_model = Order(
+									bot_id = bot.id,
+									symbol = symbol,
+									status = "NEW",
+									side = exit_params['side'], 
+									buy_price = exit_params['buy_price'],
+									is_entry = False, 
+									original_quantity = exit_params['quantity'],
+									executed_quantity = 0,
+									is_closed = False, 
+									is_test = bot.test_run,
+									order_type = self.exchange.ORDER_TYPE_MARKET
+			)			
 		return new_order_model
 
 
