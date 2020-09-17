@@ -9,7 +9,7 @@ from bot.Strategies.SimpleOneStrategy import SimpleOneStrategy
 from bot.Strategies.SimpleTwoStrategy import SimpleTwoStrategy
 from bot.Strategies.OTTStrategy import OTTStrategy
 from bot.Exchanges.Binance import Binance
-from bot.Plotter import PlotData
+from bot.Plotting.Plotter import PlotData
 
 def Main():
 	exchange = Binance()

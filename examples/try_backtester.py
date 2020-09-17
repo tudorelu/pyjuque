@@ -11,11 +11,7 @@ from pandas import DataFrame
 
 from bot.Strategies.BBRSIStrategy import BBRSIStrategy
 from bot.Engine.Backtester import backtest
-<<<<<<< HEAD
-from bot.Plotter import PlotData
-=======
 from bot.Plotting.Plotter import PlotData
->>>>>>> 59af2d290d9e9ebecd1b871504e29f00ba83b195
 
 from pprint import pprint
 
@@ -65,7 +61,7 @@ def Main():
 			pt = round(Decimal(int(individual[4])) / Decimal(1000), 3)
 			entry_strategy.args = tuple(individual[0:4])
 			exit_settings.pt = pt
-			return backtest(df, sd, binance, entry_strategy, entry_settings, exit_settings)
+			return backtest(df, symbol, binance, entry_strategy, entry_settings, exit_settings)
 
 		results = fitness_function(individual)
 

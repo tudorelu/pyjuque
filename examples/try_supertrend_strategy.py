@@ -6,7 +6,7 @@ root_path = os.path.abspath(
 sys.path.append(root_path)
 from bot.Indicators.SuperTrend import ST
 from bot.Exchanges.Binance import Binance
-from bot.Plotter import PlotData
+from bot.Plotting.Plotter import PlotData
 
 def Main():
   	

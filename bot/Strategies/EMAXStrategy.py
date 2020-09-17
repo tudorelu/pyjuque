@@ -9,8 +9,8 @@ class EMACrossover:
 
 	def setup(self, df):
 		self.df = df
-		AddIndicator(self.df, "sma", "sma_fast", self.fast)
-		AddIndicator(self.df, "sma", "sma_slow", self.slow)
+		AddIndicator(self.df, "sma", "sma_fast", "close", self.fast)
+		AddIndicator(self.df, "sma", "sma_slow", "close", self.slow)
 
 	def getIndicators(self):
 		return [

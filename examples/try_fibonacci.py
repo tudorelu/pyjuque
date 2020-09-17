@@ -5,7 +5,7 @@ root_path = os.path.abspath(
 	os.path.join(curr_path, os.path.pardir, os.path.pardir))
 sys.path.append(root_path)
 from bot.Exchanges.Binance import Binance
-from bot.Plotter import PlotData
+from bot.Plotting.Plotter import PlotData
 
 import plotly.graph_objs as go
 
