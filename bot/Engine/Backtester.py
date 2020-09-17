@@ -36,7 +36,7 @@ model_exit_settings:dotdict = dotdict(dict(
 	sl = 0.85
 ))
 
-def backtest(df, sd, exchange, 
+def backtest(df, symbol, exchange, 
 	entry_strategy=model_entry_strategy, 
 	entry_settings=model_entry_settings, 
 	exit_settings=model_exit_settings):
@@ -103,7 +103,6 @@ def backtest(df, sd, exchange,
 
 	strategy = entry_strategy.strategy_class(*entry_strategy.args)
 	strategy.setup(df)
-	
 	# Go through all the candlesticks
 	for i in range(0, len(df['close'])-1):
 
@@ -114,33 +113,33 @@ def backtest(df, sd, exchange,
 
 			if strategy_result:
 				# If strategy is fulfilled, buy the coin 
-				buy_price = exchange.roundToValidPrice(sd, strategy_result)
+				buy_price = exchange.toValidPrice(symbol, df['close'][i])
 				buy_times.append([df['time'][i], buy_price])
 				
 				# Initialize TAKE PROFIT PRICE
 				if exit_settings.pt is not None:
-					next_target_price = exchange.roundToValidPrice(sd,\
+					next_target_price = exchange.toValidPrice(symbol,\
 						buy_price * Decimal(exit_settings.pt), round_up=True)
 
 				# Initialize STOP LOSS PRICE
 				if exit_settings.sl is not None:
-					sl_price =  exchange.roundToValidPrice(sd,\
+					sl_price =  exchange.toValidPrice(symbol,\
 						buy_price * Decimal(exit_settings.sl))
 
 				# Initialize TRAILING STOP LOSS PRICE
 				if exit_settings.tsl is not None:
-					tsl_activate_after =  exchange.roundToValidPrice(sd,\
+					tsl_activate_after =  exchange.toValidPrice(symbol,\
 						buy_price * Decimal(exit_settings.tsl.after_profit))
 
 					if tsl_activate_after <= buy_price:
 						tsl_active = True
 						tsl_increase_price = buy_price
-						tsl_sell_price =  exchange.roundToValidPrice(sd,\
+						tsl_sell_price =  exchange.toValidPrice(symbol,\
 							buy_price * Decimal(exit_settings.tsl.value))
 
 				# Initialize SUBSEQUENT ENTRY PRICE
 				if entry_settings.se is not None:
-					next_entry_price = exchange.roundToValidPrice(sd,\
+					next_entry_price = exchange.toValidPrice(symbol,\
 						buy_price * Decimal(entry_settings.se.after_profit))
 
 				last_buy = { 
@@ -160,7 +159,7 @@ def backtest(df, sd, exchange,
 						tsl_active_times.append((df['time'][i], tsl_activate_after))
 						tsl_active = True
 						tsl_increase_price = Decimal(df['high'][i])
-						tsl_sell_price = exchange.roundToValidPrice(sd,\
+						tsl_sell_price = exchange.toValidPrice(symbol,\
 							Decimal(df['high'][i]) * Decimal(exit_settings.tsl.value))
 				if tsl_active:
 					if Decimal(df['low'][i]) <= tsl_sell_price:
@@ -177,7 +176,7 @@ def backtest(df, sd, exchange,
   					# Price went above pervious high so we adjust TSL Target  
 						tsl_increase_times.append((df['time'][i], tsl_increase_price))
 						tsl_increase_price = Decimal(df['high'][i])
-						tsl_sell_price = exchange.roundToValidPrice(sd,\
+						tsl_sell_price = exchange.toValidPrice(symbol,\
 							Decimal(df['high'][i]) * Decimal(exit_settings.tsl.value))
 
 			### STOP LOSS LOGIC
@@ -201,23 +200,23 @@ def backtest(df, sd, exchange,
 				buy_price = next_entry_price
 
 				if entry_settings.pt is not None:
-					next_target_price = exchange.roundToValidPrice(sd,\
+					next_target_price = exchange.toValidPrice(symbol,\
 						buy_price * Decimal(entry_settings.pt) * \
 						Decimal(entry_settings.se.pt_decrease), round_up=True)
 
 				if exit_settings.tsl is not None:
-					tsl_activate_after = exchange.roundToValidPrice(sd,\
+					tsl_activate_after = exchange.toValidPrice(symbol,\
 						buy_price * Decimal(exit_settings.tsl.after_profit))
 
 					if tsl_activate_after <= buy_price:
 						tsl_active = True
 						tsl_increase_price = buy_price
-						tsl_sell_price =  exchange.roundToValidPrice(sd,\
+						tsl_sell_price =  exchange.toValidPrice(symbol,\
 							buy_price * Decimal(exit_settings.tsl.value))
 					else:
 						tsl_active = False
 				
-				next_entry_price = exchange.roundToValidPrice(sd,\
+				next_entry_price = exchange.toValidPrice(symbol,\
 					buy_price * Decimal(entry_settings.se.after_profit))
 				buy_times.append([df['time'][i], buy_price])
 				last_buy = { "index": i, "price": buy_price}
@@ -239,7 +238,7 @@ def backtest(df, sd, exchange,
 
 	ms = df['time'][len(df['time'])-1] - df['time'][0]
 	return dict(
-		total_profit_loss = round(resulting_percentage, 2),
+		total_profit_loss = round(float(resulting_percentage), 2),
 		buy_times = buy_times, 
 		tp_sell_times = tp_sell_times,
 		sl_sell_times = sl_sell_times,

@@ -1,7 +1,7 @@
 import pandas as pd
 import requests
 import json
-
+import os
 import plotly.graph_objs as go
 from plotly.offline import plot
 
@@ -290,6 +290,7 @@ def PlotData(df,
 	fig = go.Figure(data = data, layout = layout)
 
 	if save_plot or show_plot:
-		plot(fig, filename="graphs/"+plot_title+'.html', auto_open=show_plot)
+		file_path = os.path.abspath('graphs')
+		plot(fig, filename=os.path.join(file_path, plot_title+'.html'), auto_open=show_plot)
 
 	return fig

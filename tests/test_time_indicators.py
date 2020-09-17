@@ -35,7 +35,7 @@ class PytiIndicatorsTests(unittest.TestCase):
 	###############
 	#### tests ####
 	###############
-	def test_AddCredentials(self):
+	def _AddCredentials(self):
 		for key in INDICATOR_DICT.keys():
 			ret, time_5 = timeit(AddIndicator, False, self.df_1k, key, key, 5)
 			ret, time_50 = timeit(AddIndicator, False, self.df_1k, key, key, 50)

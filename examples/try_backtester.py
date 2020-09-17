@@ -11,7 +11,11 @@ from pandas import DataFrame
 
 from bot.Strategies.BBRSIStrategy import BBRSIStrategy
 from bot.Engine.Backtester import backtest
+<<<<<<< HEAD
 from bot.Plotter import PlotData
+=======
+from bot.Plotting.Plotter import PlotData
+>>>>>>> 59af2d290d9e9ebecd1b871504e29f00ba83b195
 
 from pprint import pprint
 

@@ -18,16 +18,16 @@ class BBRSIStrategy:
 		self.rsi_os = rsi_os
 		self.bb_len = bb_len
 		self.rsi_len = rsi_len
-
+		self.minimum_period = max(self.bb_len, self.rsi_len) + 5
 
 	def setup(self, df):
 		self.df = df
-		AddIndicator(self.df, "rsi", "rsi", 'close', self.rsi_len)
-		AddIndicator(self.df, "lbb", "lbb", 'close', self.bb_len)
-		# AddIndicator(self.df, "ema", "ema_80", 'close', 80)
-		# AddIndicator(self.df, "ema", "ema_300", 'close', 3000)
-		# AddIndicator(self.df, "ubb", "ubb", 'close', self.bb_len)
-
+		AddIndicator(self.df, "rsi", "rsi", self.rsi_len)
+		AddIndicator(self.df, "lbb", "lbb", self.bb_len)
+		AddIndicator(self.df, "ubb", "ubb", self.bb_len)
+		# AddIndicator(self.df, "ema", "ema_80", 80)
+		# AddIndicator(self.df, "ema", "ema_300", 3000)
+		# AddIndicator(self.df, "ubb", "ubb", self.bb_len)
 
 	def getIndicators(self):
 		return [
@@ -42,21 +42,16 @@ class BBRSIStrategy:
 		df = self.df
 		if i > 1 and (df["rsi"][i] > self.rsi_os) and \
 			(df["rsi"][i-1] <= self.rsi_os) and \
-			(df['low'][i-1] < df["lbb"][i] < df['open'][i]) and \
-			df['close'][i] > df['lbb'][i]:
-			return df["close"][i]
-			# (df['close'][i] > df['ema_300'][i]) and \
-			
+			(df['open'][i] < df["lbb"][i] < df['close'][i]):
+			return True
 		return False
 		
 	def checkSellSignal(self, i):
 		df = self.df
 		if i > 1 and (df["rsi"][i] < self.rsi_ob) and \
 			(df["rsi"][i-1] >= self.rsi_ob) and \
-			(df["high"][i-1] > df["ubb"][i] > df["open"][i]) and \
-			df['close'][i] < df['ubb'][i]:
-			return df["close"][i]
-	
+			(df["close"][i] < df["ubb"][i] < df["open"][i]):
+			return True
 		return False
 
 	def getBuySignalsList(self):

@@ -1,7 +1,13 @@
 # app/tests/test_basic.py
 
 import os
+import sys
 import unittest
+
+curr_path = os.path.abspath(__file__)
+root_path = os.path.abspath(
+	os.path.join(curr_path, os.path.pardir, os.path.pardir))
+sys.path.insert(1, root_path)
 
 # Import all Created exchanges here
 from bot.Exchanges.Binance import Binance
