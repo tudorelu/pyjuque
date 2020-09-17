@@ -1,4 +1,4 @@
-from bot.Indicators import AddIndicator
+from bot.Indicators.Indicators import AddIndicator
 
 class AlwaysBuyStrategy:
 	""" Always Buy Strategy:
@@ -7,6 +7,7 @@ class AlwaysBuyStrategy:
 
 	def __init__(self):
 		""" """
+		self.minimum_period = 5
 	
 	def setup(self, df):
 		self.df = df

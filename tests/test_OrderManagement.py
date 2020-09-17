@@ -30,7 +30,7 @@ import datetime as dt
 from bot.Exchanges.Binance import Binance # pylint: disable=E0401
 from bot.Strategies.EMAXStrategy import EMACrossover # pylint: disable=E0401
 from bot.Engine import backtest, OrderManagement, Order, Pair, Bot, Base # pylint: disable=E0401
-from bot.Plotter import PlotData # pylint: disable=E0401
+from bot.Plotting.Plotter import PlotData # pylint: disable=E0401
 
 class OrderManagementTests(unittest.TestCase):
 	############################

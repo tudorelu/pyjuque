@@ -1,4 +1,4 @@
-from bot.Indicators import AddIndicator
+from bot.Indicators.Indicators import AddIndicator
 
 class BBRSIStrategy:
 	""" Bollinger Bands x RSI Indicator 
@@ -18,6 +18,7 @@ class BBRSIStrategy:
 		self.rsi_os = rsi_os
 		self.bb_len = bb_len
 		self.rsi_len = rsi_len
+		self.minimum_period = max(self.bb_len, self.rsi_len) + 5
 
 	def setup(self, df):
 		self.df = df

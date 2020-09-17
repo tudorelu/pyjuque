@@ -1,10 +1,11 @@
-from bot.Indicators import AddIndicator
+from bot.Indicators.Indicators import AddIndicator
 
 class EMACrossover:
 
 	def __init__(self, fast, slow):
 		self.fast = fast
 		self.slow = slow
+		self.minimum_period = max(self.fast, self.slow) + 5
 
 	def setup(self, df):
 		self.df = df

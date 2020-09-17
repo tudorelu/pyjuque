@@ -103,10 +103,11 @@ class Binance(BaseExchange):
 			else:
 				data = payload
 				data['url'] = url
+				data['success'] = True
 		except Exception as e:
 			print("Exception occured when trying to GET from "+url)
 			print_exc()
-			data = {'code': '-1', 'url':url, 'msg': e}
+			data = {'code': '-1', 'url':url, 'msg': e, 'success':False}
 		return data
 
 	def _post(self, url, params=None, headers=None,):
@@ -115,10 +116,11 @@ class Binance(BaseExchange):
 			response = requests.post(url, params=params, headers=headers)
 			data = json.loads(response.text)
 			data['url'] = url
+			data['success'] = True
 		except Exception as e:
 			print("Exception occured when trying to POST to "+url); print(e); print("Params"); print(params)
 			print_exc()
-			data = {'code': '-1', 'url':url, 'msg': e}
+			data = {'code': '-1', 'url':url, 'msg': e, 'success':False}
 		return data
 
 	def _delete(self, url, params=None, headers=None):
@@ -127,10 +129,11 @@ class Binance(BaseExchange):
 			response = requests.delete(url, params=params, headers=headers)
 			data = json.loads(response.text)
 			data['url'] = url
+			data['success'] = True
 		except Exception as e:
 			print("Exception occured when trying to DELETE from "+url); print(e); print("Params"); print(params)
 			print_exc()
-			data = {'code': '-1', 'url':url, 'msg': e, 'params':params}
+			data = {'code': '-1', 'url':url, 'msg': e, 'success':False, 'params':params}
 		return data
 
 	def _signRequest(self, params):

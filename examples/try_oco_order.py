@@ -20,7 +20,7 @@ def Main():
 	ctx = Context()
 	ctx.prec = 20
 
-	order = OCOOrder(exchange, 'ethusdt', 0.05, 'SELL', Decimal(367), Decimal(368), verbose=2)
+	order = OCOOrder(exchange, 'ethusdt', 0.05, 'SELL', Decimal(364), Decimal(364.7), verbose=2)
 	order.start()
 
 

@@ -57,7 +57,7 @@ class OrderManagement:
 
 			symbol = pair.symbol
 			print("Checking signal on", symbol)
-			df = exchange.getSymbolKlines(symbol, "5m", limit=100)
+			df = exchange.getSymbolKlines(symbol, "5m", limit=strategy.minimum_period)
 			l = len(df) - 1
 			strategy.setup(df)
 			buy_signal = strategy.checkBuySignal(l)

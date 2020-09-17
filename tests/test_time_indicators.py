@@ -10,7 +10,7 @@ root_path = os.path.abspath(
 sys.path.append(root_path)
 # Import all Created exchanges here
 from bot.Exchanges.Binance import Binance
-from bot.Indicators import AddIndicator, INDICATOR_DICT
+from bot.Indicators.Indicators import AddIndicator, INDICATOR_DICT
 from tests.utils import timeit
 from pandas import DataFrame
 

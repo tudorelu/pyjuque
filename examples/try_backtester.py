@@ -11,7 +11,7 @@ from pandas import DataFrame
 
 from bot.Strategies.BBRSIStrategy import BBRSIStrategy
 from bot.Engine.Backtester import backtest
-from bot.Plotter import PlotData
+from bot.Plotting.Plotter import PlotData
 
 from pprint import pprint
 

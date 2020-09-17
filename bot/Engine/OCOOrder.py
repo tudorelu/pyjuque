@@ -1,8 +1,9 @@
 from uuid import uuid4
 from pprint import pprint
-from bot.Exchanges.Binance import Binance
-import json, websocket, numpy
+import json, websocket
 from decimal import Decimal
+
+### WARNING: UNDER DEVELOPMENT
 
 EXCHANGE_INVALID_MESSAGE = "Not a valid response from the exchange, try again next time..."
 CLOSING_WEBSOCKET_MESSAGE = "Closing down this websocket."
@@ -197,3 +198,4 @@ class OCOOrder:
 
 		return False
 		
+### WARNING: UNDER DEVELOPMENT
