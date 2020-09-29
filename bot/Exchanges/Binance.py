@@ -15,8 +15,8 @@ curr_path = os.path.abspath(__file__)
 root_path = os.path.abspath(os.path.join(curr_path, os.path.pardir, os.path.pardir))
 sys.path.append(root_path)
 from os.path import join, dirname
-from dotenv import load_dotenv
-load_dotenv(join(dirname(__file__), '../../.env'))
+from dotenv import load_dotenv, find_dotenv
+load_dotenv(find_dotenv())
 # END TODO
 
 from bot.Exchanges.Base.BaseExchange import BaseExchange # pylint: disable=E0401
@@ -25,10 +25,8 @@ from bot.Exchanges.Base.Exceptions import InvalidCredentialsException, InternalE
 from pprint import pprint
 
 class Binance(BaseExchange):
-	""" Wrapper around the Binance REST API """
 
 	ORDER_STATUS_NEW = 'NEW'
-	
 	ORDER_STATUS_PARTIALLY_FILLED = 'PARTIALLY_FILLED'
 	ORDER_STATUS_FILLED = 'FILLED'
 	ORDER_STATUS_CANCELED = 'CANCELED'
@@ -59,7 +57,8 @@ class Binance(BaseExchange):
 		"exchangeInfo": '/api/v3/exchangeInfo',
 		"averagePrice" : '/api/v3/avgPrice',
 		"orderBook" : '/api/v3/depth',
-		"account" : '/api/v3/account'
+		"account" : '/api/v3/account',
+		"tickprice": '/api/v3/ticker/24hr'
 	}
 
 	SYMBOL_DATAS = dict()
@@ -105,11 +104,10 @@ class Binance(BaseExchange):
 			else:
 				data = payload
 				data['url'] = url
-				data['success'] = True
 		except Exception as e:
 			print("Exception occured when trying to GET from "+url)
 			print_exc()
-			data = {'code': '-1', 'url':url, 'msg': e, 'success':False}
+			data = {'code': '-1', 'url':url, 'msg': e}
 		return data
 
 	def _post(self, url, params=None, headers=None,):
@@ -118,11 +116,10 @@ class Binance(BaseExchange):
 			response = requests.post(url, params=params, headers=headers)
 			data = json.loads(response.text)
 			data['url'] = url
-			data['success'] = True
 		except Exception as e:
 			print("Exception occured when trying to POST to "+url); print(e); print("Params"); print(params)
 			print_exc()
-			data = {'code': '-1', 'url':url, 'msg': e, 'success':False}
+			data = {'code': '-1', 'url':url, 'msg': e}
 		return data
 
 	def _delete(self, url, params=None, headers=None):
@@ -131,11 +128,10 @@ class Binance(BaseExchange):
 			response = requests.delete(url, params=params, headers=headers)
 			data = json.loads(response.text)
 			data['url'] = url
-			data['success'] = True
 		except Exception as e:
 			print("Exception occured when trying to DELETE from "+url); print(e); print("Params"); print(params)
 			print_exc()
-			data = {'code': '-1', 'url':url, 'msg': e, 'success':False, 'params':params}
+			data = {'code': '-1', 'url':url, 'msg': e, 'params':params}
 		return data
 
 	def _signRequest(self, params):
@@ -162,11 +158,18 @@ class Binance(BaseExchange):
 		for symb in symbols:
 			Binance.SYMBOL_DATAS[symb['symbol']] = symb
 
+
 	def addCredentials(self, api_key, secret_key):
 		""" Adds API & SECRET keys into the object's memory """
 		new_keys = dict(api_key=api_key, secret_key=secret_key)
 		self.api_keys = new_keys
 		self.has_credentials = True
+
+	def getCurrentTickPrice(self, symbol):
+		url = Binance.BASE_URL + Binance.ENDPOINTS['tickprice']
+		params = {'symbol': symbol.upper()}
+		tick_info = self._get(url, params, self.headers)
+		return tick_info
 
 	def getAccountData(self):
 		""" Gets data for Account connected to API & SECRET Keys given """	
@@ -308,7 +311,6 @@ class Binance(BaseExchange):
 		""" Places order on exchange given a dictionary of parameters.
 			Check this link for more info on the required parameters: 
 			https://github.com/binance-exchange/binance-official-api-docs/blob/master/rest-api.md#new-order--trade
-
 			Parameters
 			--
 				params dict:
@@ -316,7 +318,6 @@ class Binance(BaseExchange):
 					such as SIDE (buy/sell), TYPE (market/limit/oco), SYMBOL, etc.
 				test bool:
 					Decides whether this will be a test order or not.
-
 		"""
 
 		params['symbol'] = params['symbol'].upper()
@@ -332,6 +333,25 @@ class Binance(BaseExchange):
 			url = Binance.BASE_URL + Binance.ENDPOINTS['testOrder']
 
 		return self._post(url, params, self.headers)
+
+	def placeOrderFromOrderModel(self, order_model):
+		""" Places order on exchange given a dictionary of parameters.
+			Check this link for more info on the required parameters: 
+			https://github.com/binance-exchange/binance-official-api-docs/blob/master/rest-api.md#new-order--trade
+			Parameters
+			--
+				params dict:
+					A dictionary of parameters containing info about the order,
+					such as SIDE (buy/sell), TYPE (market/limit/oco), SYMBOL, etc.
+				test bool:
+					Decides whether this will be a test order or not.
+		"""
+		if order_model.order_type == self.ORDER_TYPE_LIMIT:
+			self.placeLimitOrder(order_model.symbol, order_model.price, order_model.side, order_model.quantity, order_model.is_test, custom_id=order_model.id)
+		if order_model.order_type == self.ORDER_TYPE_MARKET:
+			self.placeMarketOrder(order_model.symbol, order_model.side, order_model.quantity, order_model.is_test, custom_id=order_model.id)
+		if order_model.order_type == self.ORDER_TYPE_STOP_LOSS:
+			self.placeStopLossMarketOrder(order_model.symbol, order_model.price, order_model.side, order_model.quantity, order_model.is_test, custom_id=order_model.id)
 
 	def placeMarketOrder(self, symbol:str, side:str, amount:str, quote_amount=None, 
 	test:bool=False, round_up_amount=False, custom_id=False, verbose=True):
@@ -584,7 +604,6 @@ class Binance(BaseExchange):
 		so that it's between 1 (inclusive) and 10 (exclusive)
 		
 		_get10Factor(0.00000164763) = 6
-
 		_get10Factor(1600623.3) = -6
 		"""
 		p = 0
@@ -668,14 +687,13 @@ class Binance(BaseExchange):
 		new_order_response. Should be part of the exchange interface  """
 
 		if order.is_test:
-			order.take_profit_price = self.toValidPrice(
-				symbol = order.symbol,
-				desired_price = Decimal(order.entry_price) * (Decimal(100) + Decimal(bot.profit_target))/Decimal(100), 
-				round_up=True)
+			order.entry_price = self.getCurrentTickPrice(order.symbol)['lastPrice']
+			if (order.order_type == self.ORDER_TYPE_MARKET) and not order.is_entry:
+				order.price = ((Decimal(100) - Decimal(bot.exit_settings.stop_loss_value))/Decimal(100)) * Decimal(order.entry_price)
 
 		else:
 			order.timestamp = new_order_response['transactTime']
-			order.entry_price = new_order_response['price']
+			order.price = new_order_response['price']
 			order.take_profit_price = self.toValidPrice(
 				symbol = order.symbol,
 				desired_price = Decimal(new_order_response['price']) * Decimal(bot.profit_target), 
@@ -684,5 +702,7 @@ class Binance(BaseExchange):
 			order.executed_quantity =  Decimal(new_order_response['executedQty'])
 			order.status = new_order_response['status']
 			order.side = new_order_response['side']
+			if order.side == 'BUY':
+				order.entry_price = new_order_response['price']
 
 		return order

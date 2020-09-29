@@ -9,7 +9,12 @@
 import pandas as pd
 from decimal import Decimal
 
-from bot.Utils import dotdict
+# HELPER CLASS
+class dotdict(dict):
+	"""dot.notation access to dictionary attributes"""
+	__getattr__ = dict.get
+	__setattr__ = dict.__setitem__
+	__delattr__ = dict.__delitem__
 
 model_entry_strategy:dotdict = dotdict(dict(
 	strategy_class = "some_function",
@@ -102,14 +107,14 @@ def backtest(df, symbol, exchange,
 	tsl_activate_after = None
 
 	strategy = entry_strategy.strategy_class(*entry_strategy.args)
-	strategy.setup(df)
+
 	# Go through all the candlesticks
 	for i in range(0, len(df['close'])-1):
 
 		# Have we already opened a position?
 		if last_buy is None:
 			# If no, check whether the strategy is fulfilled at this point in time
-			strategy_result = strategy.checkBuySignal(i)
+			strategy_result = strategy.shouldEntryOrder(df)
 
 			if strategy_result:
 				# If strategy is fulfilled, buy the coin 
@@ -248,6 +253,6 @@ def backtest(df, symbol, exchange,
 		profits_list = profits_list,
 		start_time = df['time'][0],
 		end_time = df['time'][len(df['time'])-1],
-		miliseconds_of_backtesting = ms,
+		seconds_of_backtesting = ms/1000,
 		days_of_backtesting = round((ms/(1000 * 60 * 60 * 24)), 1)
 	)

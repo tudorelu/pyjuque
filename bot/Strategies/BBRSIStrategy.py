@@ -1,77 +1,48 @@
-from bot.Indicators import AddIndicator
+from bot.Indicators import AddIndicator # pylint: disable=E0401
+from bot.Strategies.BaseStrategy import Strategy
 
-class BBRSIStrategy:
+class BBRSIStrategy(Strategy):
 	""" Bollinger Bands x RSI Indicator 
 		Params
 		--
 			`rsi_len` = length of RSI
-			`bb_len` = length of Bollinger Bands
+			`bb_len` = length of RBollinger Bands
 			`rsi_ob` = Overbought level of RSI	
 			`rsi_os` = Oversold level of RSI	
 	"""
-	def __init__(self, 	
+	def __init__(self, 
 		rsi_len = 8, 
 		bb_len = 100, 
 		rsi_ob = 50, 
-		rsi_os = 50):
+		rsi_os = 50,):
+
 		self.rsi_ob = rsi_ob
 		self.rsi_os = rsi_os
 		self.bb_len = bb_len
 		self.rsi_len = rsi_len
-		self.minimum_period = max(self.bb_len, self.rsi_len) + 5
+		self.minimum_period = 100
 
-	def setup(self, df):
-		self.df = df
-		AddIndicator(self.df, "rsi", "rsi", "close", self.rsi_len)
-		AddIndicator(self.df, "lbb", "lbb", "close",  self.bb_len)
-		AddIndicator(self.df, "ubb", "ubb", "close",  self.bb_len)
-		# AddIndicator(self.df, "ema", "ema_80", 80)
-		# AddIndicator(self.df, "ema", "ema_300", 3000)
-		# AddIndicator(self.df, "ubb", "ubb", self.bb_len)
+	def chooseIndicators(self):
+		self.indicators = (dict(indicator_name = 'rsi', col_name = 'rsi', rsi_len = self.rsi_len),
+						   dict(indicator_name = 'lbb', col_name = 'lbb', rsi_len = self.bb_len),
+						   dict(indicator_name = 'ubb', col_name = 'ubb', rsi_len = self.bb_len))
 
-	def getIndicators(self):
-		return [
-			dict(name="rsi", title="RSI", yaxis="y3"),
-			dict(name="lbb", title="Low Boll"),
-			# dict(name="ema_80", title="EMA 80"),
-			# dict(name="ema_300", title="EMA 300"),
-			# dict(name="ubb", title="Upper Boll", color='gray'),
-		]
-
-	def checkBuySignal(self, i):
+	def checkLongSignal(self, i):
 		df = self.df
-		if i > 1 and (df["rsi"][i] > self.rsi_os) and \
-			(df["rsi"][i-1] <= self.rsi_os) and \
-			(df['open'][i] < df["lbb"][i] < df['close'][i]):
-			return True
+		if (df["rsi"][i] > self.rsi_ob) and \
+			(df["rsi"][i-1] <= self.rsi_ob) and \
+			(df["open"][i] < df["lbb"][i] < df["close"][i]):
+			return True	
 		return False
-		
-	def checkSellSignal(self, i):
+	
+	def checkShortSignal(self, i):
+		return False
+
+	def checkToExitPosition(self, i):
 		df = self.df
-		if i > 1 and (df["rsi"][i] < self.rsi_ob) and \
+		if (df["rsi"][i] < self.rsi_ob) and \
 			(df["rsi"][i-1] >= self.rsi_ob) and \
 			(df["close"][i] < df["ubb"][i] < df["open"][i]):
-			return True
+			return True	
 		return False
 
-	def getBuySignalsList(self):
-		df = self.df
-		length = len(df) - 1
-		signals = []
-		for i in range(1, length):
-			res = self.checkBuySignal(i)
-			if res:
-				signals.append([df['time'][i], df['close'][i]])
-
-		return signals
-
-	def getSellSignalsList(self):
-		df = self.df
-		length = len(df) - 1
-		signals = []
-		for i in range(1, length):
-			res = self.checkSellSignal(i)
-			if res:
-				signals.append([df['time'][i], df['close'][i]])
-
-		return signals

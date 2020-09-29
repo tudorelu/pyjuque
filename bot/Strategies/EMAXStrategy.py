@@ -1,37 +1,23 @@
-from bot.Indicators import AddIndicator
+from bot.Strategies.BaseStrategy import Strategy # pylint: disable=E0401
 
-class EMACrossover:
+class EMACrossover(Strategy):
 
-	def __init__(self, fast, slow):
-		self.fast = fast
-		self.slow = slow
-		self.minimum_period = max(self.fast, self.slow) + 5
+    def __init__(self):
+        # Minimum period needed for indicators to be calculated
+        self.minimum_period = 100
 
-	def setup(self, df):
-		self.df = df
-		AddIndicator(self.df, "sma", "sma_fast", "close", self.fast)
-		AddIndicator(self.df, "sma", "sma_slow", "close", self.slow)
+    def chooseIndicators(self):
+        self.indicators = dict(indicator_name  = 'sma', col_name = 'sma_fast', period = 5), dict(indicator_name = 'sma', col_name = 'sma_slow', period = 25)
+        
+    def checkLongSignal(self, i):
+        df = self.df
+        if i > 0 and df['sma_fast'][i] >= df['sma_slow'][i] \
+            and df['sma_fast'][i-1] < df['sma_slow'][i-1]:
+            return True
+        return False
 
-	def getIndicators(self):
-		return [
-			dict(name="sma_fast", title="SMA "+str(self.fast)),
-			dict(name="sma_slow", title="SMA "+str(self.slow))
-		]
-
-	def checkBuySignal(self, i):
-		df = self.df
-		if i > 0 and df['sma_fast'][i] >= df['sma_slow'][i] \
-			and df['sma_fast'][i-1] < df['sma_slow'][i-1]:
-			return True
-		return False
-	
-	def getBuySignalsList(self):
-		df = self.df
-		length = len(df) - 1
-		signals = []
-		for i in range(1, length):
-			res = self.checkBuySignal(i)
-			if res:
-				signals.append([df['time'][i], df['close'][i]])
-
-		return signals
+    def checkShortSignal(self, i):
+        return False  
+    
+    def checkToExitPosition(self, i):
+        return True
