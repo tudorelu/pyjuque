@@ -5,6 +5,7 @@ from traceback import print_exc
 from decimal import Decimal
 from uuid import uuid4
 import time
+import math
 from bot.Exchanges.Binance import Binance # pylint: disable=E0401
 from bot.Engine.Models import Bot, Pair, Order # pylint: disable=E0401
 
@@ -173,18 +174,16 @@ class BotController:
         For now you can only close orders based on time passed.
         """
         exchange = self.exchange
-        strategy = self.strategy
 
-        if strategy.buy_order_time_out:
-            # How can we guarantee timestamp of exchange is always in ms?
-            if order.timestamp - time.time()*1000 > self.bot.entry_settings.buy_order_time_out:
-                if self.test_mode:
-                    order_result = exchange.cancelOrder(order.symbol, order.id)
-                else:
-                    order_result = dict(status=self.exchange.ORDER_STATUS_CANCELED)
-                if exchange.isValidResponse(order_result):
-                    order.status = order_result['status']
-                    self.processClosedPosition(order, pair)
+        # How can we guarantee timestamp of exchange is always in ms?
+        if (order.timestamp).timestamp() - time.time()*1000 > self.bot.entry_settings.open_buy_order_time_out:
+            if not self.test_mode:
+                order_result = exchange.cancelOrder(order.symbol, order.id)
+            else:
+                order_result = dict(status=self.exchange.ORDER_STATUS_CANCELED)
+            if exchange.isValidResponse(order_result):
+                order.status = order_result['status']
+                self.processClosedPosition(order, pair)
 
     def updateOpenSellOrder(self, order, pair):
         """
@@ -232,9 +231,23 @@ class BotController:
         strategy = self.strategy
 
         candlestick_data = exchange.getSymbolKlines(symbol, self.kline_interval, strategy.minimum_period)
-        exit_signal = strategy.shouldExitOrder(candlestick_data)
+        if bot.exit_settings.exit_on_signal:
+            exit_signal = strategy.shouldExitOrder(candlestick_data)
 
-        if exit_signal:
+            if exit_signal:
+                quantity = self.computeQuantity(order)
+                order_type = exchange.ORDER_TYPE_MARKET
+                side = 'SELL'
+                self.placeNewOrder(
+                                symbol, 
+                                pair,
+                                order=order, 
+                                quantity=quantity, 
+                                side=side, 
+                                order_type=order_type
+                                )
+
+        if not bot.exit_settings.exit_on_signal:
             # Calculates quantity of order. Takes in to account partially filled orders.
             current_price = candlestick_data.iloc[-1]['close']
             stop_loss_active = bot.exit_settings.stop_loss_value is not None
@@ -279,7 +292,7 @@ class BotController:
         new_order_model = self.createOrderModel(symbol, order_params, order)
 
         if not self.test_mode:
-            new_order_response = self.exchange.placeOrderFromOrderModel(new_order_model)
+            new_order_response = self.placeOrderFromOrderModel(new_order_model)
         else:
             new_order_response = dict(message='success')
 
@@ -301,9 +314,11 @@ class BotController:
             order_params['is_entry'] = False
         if order is None:
             position_id = str(uuid4())
+            entry_price = None
         elif order is not None:
             position_id = order.position_id
-
+            entry_price = order.entry_price      
+        
         new_order_model = Order(
                                 id = str(uuid4()),
                                 position_id = position_id,
@@ -317,8 +332,21 @@ class BotController:
                                 side = order_params['side'],
                                 is_entry =  order_params['is_entry'],
                                 is_test = self.test_mode,
+                                entry_price = entry_price,
+                                last_checked_time = int(round(time.time() * 1000))
                                 )
         return new_order_model
+
+    def placeOrderFromOrderModel(self, order_model):
+        """ Places orders from db model to exchange."""
+        exchange = self.exchange
+        if order_model.order_type == exchange.ORDER_TYPE_LIMIT:
+            order_response = exchange.placeLimitOrder(order_model.symbol, order_model.price, order_model.side, order_model.original_quantity, order_model.is_test, custom_id=order_model.id)
+        if order_model.order_type == exchange.ORDER_TYPE_MARKET:
+            order_response = exchange.placeMarketOrder(order_model.symbol, order_model.side, order_model.original_quantity, order_model.is_test, custom_id=order_model.id)
+        if order_model.order_type == exchange.ORDER_TYPE_STOP_LOSS:
+            order_response = exchange.placeStopLossMarketOrder(order_model.symbol, order_model.price, order_model.side, order_model.original_quantity, order_model.is_test, custom_id=order_model.id)
+        return order_response
 
     def syncModels(self, pair, order, new_order_model):
         """ Sync pairs and orders to new status """
@@ -345,41 +373,54 @@ class BotController:
     def simulateOrderInfo(self, order):
         """ Used when BotController is in test mode. Simulates order info returned by exchange."""
         order_status = dict()
-        candlestick_data = self.exchange.getSymbolKlines(order.symbol, self.kline_interval, self.strategy.minimum_period)
-        current_price = candlestick_data.iloc[-1]['close']
-        if order.side == 'BUY':
-            # Market Entry Order
-            if self.bot.entry_settings.signal_distance == 0:
-                order_status['status'] = self.exchange.ORDER_STATUS_FILLED
-                order_status['side'] = order.side
-                order_status['executedQty'] = order.original_quantity
-            # Limit Entry Order
-            elif (Decimal(100) + Decimal(self.bot.entry_settings.signal_distance))/Decimal(100) * Decimal(order.entry_price) <= current_price:
-                order_status['status'] = self.exchange.ORDER_STATUS_FILLED
-                order_status['side'] = order.side
-                order_status['executedQty'] = order.original_quantity
-
-        elif order.order_type == self.exchange.ORDER_TYPE_LIMIT:
-            if current_price >= order.price:
-                order_status['status'] = self.exchange.ORDER_STATUS_FILLED
-                order_status['side'] = order.side
-                order_status['executedQty'] = order.original_quantity
-            else:
-                order_status['status'] = self.exchange.ORDER_STATUS_NEW
-                order_status['side'] = order.side      
-                order_status['executedQty'] = 0
-        elif order.order_type == self.exchange.ORDER_TYPE_MARKET:
-            order_status['status'] = self.exchange.ORDER_STATUS_FILLED
-            order_status['side'] = order.side
-            order_status['executedQty'] = order.original_quantity
-        elif order.order_type == self.exchange.ORDER_TYPE_STOP_LOSS:
-            if ((Decimal(100) - Decimal(self.bot.exit_settings.stop_loss_value))/Decimal(100)) * Decimal(order.entry_price) >= Decimal(current_price):
-                order_status['status'] = self.exchange.ORDER_STATUS_FILLED
-                order_status['side'] = order.side
-                order_status['executedQty'] = order.original_quantity
-            else:
-                order_status['status'] = self.exchange.ORDER_STATUS_NEW
-                order_status['side'] = order.side
-                order_status['executedQty'] = 0
+        new_last_checked_time = int(round(time.time() * 1000)) # time in ms
+        time_diff = new_last_checked_time - order.last_checked_time
+        interval_in_ms = self.klineIntervalToMs(self.kline_interval)
+        if  time_diff < interval_in_ms:
+            candlestick_data = self.exchange.getSymbolKlines(order.symbol, self.kline_interval, 1)
+        else:
+            minimum_period = int(math.ceil(time_diff / interval_in_ms))
+            candlestick_data = self.exchange.getSymbolKlines(order.symbol, self.kline_interval, minimum_period, start_time=order.last_checked_time)
         
+        for _, candle in candlestick_data.iterrows():
+            lowest_price = candle['low']
+            if order.order_type == self.exchange.ORDER_TYPE_LIMIT:
+                if lowest_price <= order.price:
+                    order_status['status'] = self.exchange.ORDER_STATUS_FILLED
+                    order_status['side'] = order.side
+                    order_status['executedQty'] = order.original_quantity
+                    break
+            elif order.order_type == self.exchange.ORDER_TYPE_MARKET:
+                order.price = (candle['open']+candle['close'])/2 # not sure what to set this value to. For now average of open and close of candle.
+                order_status['status'] = self.exchange.ORDER_STATUS_FILLED
+                order_status['side'] = order.side
+                order_status['executedQty'] = order.original_quantity
+                break
+            elif order.order_type == self.exchange.ORDER_TYPE_STOP_LOSS:
+                if lowest_price >= order.price:
+                    order_status['status'] = self.exchange.ORDER_STATUS_FILLED
+                    order_status['side'] = order.side
+                    order_status['executedQty'] = order.original_quantity
+                    break
+        if not order_status:
+            order_status['status'] = self.exchange.ORDER_STATUS_NEW
+            order_status['side'] = order.side      
+            order_status['executedQty'] = 0
+
+        order.last_checked_time = new_last_checked_time
         return order_status
+    
+    def klineIntervalToMs(self, kline_interval:str):
+        number = int(kline_interval[:-1])
+        unit = kline_interval[-1]
+        if unit == 'm':
+            multiply_by = 1000 * 60
+        if unit =='h':
+            multiply_by = 1000 * 60 * 60
+        if unit == 'd':
+            multiply_by = 1000 * 60 * 60 * 24
+        if unit == 'w':
+            multiply_by = 1000 * 60 * 60 * 24 * 7
+        if unit == 'M':
+            multiply_by = 1000 * 60 * 60 * 24 * 31 # bit too long does not matter.
+        return number * multiply_by

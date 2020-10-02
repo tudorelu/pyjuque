@@ -29,9 +29,9 @@ def initialize_database(session):
 		myobject = Bot(
 			name="test_bot_2",
 			quote_asset = 'BTC',
-			starting_balance = 0.001,
-			current_balance = 0.001,
-			test_run=True
+			starting_balance = 0.1,
+			current_balance = 0.1,
+			test_run=False
 		)
 
 		session.add(myobject)
@@ -47,6 +47,7 @@ def initialize_database(session):
 								name='TimLoss',
 								profit_target=1,
 								stop_loss_value=0,
+								exit_on_signal=True
 								)
 		myobject.entry_settings = entrysets
 		myobject.exit_settings = exitsets
@@ -93,7 +94,7 @@ def Main():
 
 	bot = session.query(Bot).filter_by(name='test_bot_2').first()
 	# input your path to credentials here.
-	exchange = Binance(filename=r'C:\Users\31614\Desktop\pyjuque\pyjuque\bot\Exchanges\credentials.txt')
+	exchange = Binance(filename=)
 	strategy = AlwaysBuyStrategy()
 	om = BotController(session, bot, exchange, strategy)
 

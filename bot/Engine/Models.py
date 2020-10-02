@@ -56,6 +56,7 @@ class Order(Base):
 		matched_order_id = db.Column(db.Integer, db.ForeignKey('order.id'), default=None)
 		is_test = db.Column(db.Boolean)
 		order_type = db.Column(db.String(30), index = True)
+		last_checked_time = db.Column(db.Integer)
 
 class Pair(Base):
 		""""""
@@ -116,7 +117,7 @@ class EntrySettings(Base):
 																	# subsequent entry (1 = 100%, 0.5 = 50%)
 	subsequent_entry_distance = db.Column(db.Float, default=None) 	# Distance between subsequent entries in %
 	signal_distance = db.Column(db.Float, default=0)         		# Distance from signal for initial entry 
-																		# None means enter on signal, 1 means enter 1% away 
+																		# 0 means enter on signal, 1 means enter 1% away 
 																		# - in the direction opposite that of the trade - 
 																		# from the signal price
 
@@ -129,5 +130,5 @@ class ExitSettings(Base):
     profit_target = db.Column(db.Float)                           	# Exit when price is at value % profit from entry 
     stop_loss_value = db.Column(db.Float, default=None)             	# Whether to have stop loss or not (and what %)
     is_trailing_stop_loss = db.Column(db.Boolean, default=False)    	# Whether to have trailing stop loss or not (what %)
-    stop_loss_active_after = db.Column(db.Float, default=None)    	# If we have trailing stop loss, whether to activate 
-                                                                    # immediately, or after a value % increase in profit
+    stop_loss_active_after = db.Column(db.Float, default=None)    	# If we have trailing stop loss, whether to activate immediately, or after a value % increase in profit
+    exit_on_signal = db.Column(db.Boolean, default=False)       
