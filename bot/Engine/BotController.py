@@ -17,8 +17,8 @@ class BotController:
         self.exchange = exchange
         self.strategy = strategy
         self.test_mode = bot.test_run
-        self.kline_interval = '5m'	
-    
+        self.kline_interval = '5m'
+
     def executeBot(self):
             """ The main execution loop of the bot """
 
@@ -28,7 +28,7 @@ class BotController:
             logger.info("Number of active_pairs: {}".format(len(active_pairs)))
 
             # Step 2 For Each Pair:
-            #		Retreive current market data 
+            #		Retreive current market data
             # 	Compute Indicators & Check if Strategy is Fulfilled
             #		IF Fulfilled, palce order (Save order in DB)
             logger.info("Checking signals on pairs...")
@@ -40,10 +40,10 @@ class BotController:
             open_orders = self.bot.getOpenOrders(self.session)
             logger.info("Number of open orders: {}".format(len(open_orders)))
 
-            # Step 4: For Each order that was already placed by the bot 
+            # Step 4: For Each order that was already placed by the bot
             # and was not filled before, check status:
             #		IF Filled -> If entry order, place exit order
-            #							-> If exit order, success (take profit), or 
+            #							-> If exit order, success (take profit), or
             # 															failure (stop loss): Resume trading!
             logger.info("Checking orders state...")
             for order in open_orders:
@@ -62,8 +62,10 @@ class BotController:
         logger.info("Checking signal on {}".format(symbol))
 
         df = exchange.getSymbolKlines(symbol, self.kline_interval, limit=strategy.minimum_period)
-        entry_signal = strategy.shouldEntryOrder(df)
-        
+        strategy.setUp(df)
+        i = len(df)-1
+        entry_signal = strategy.shouldEntryOrder(i)
+
         if entry_signal:
             side = 'BUY'
             quote_qty = Decimal(bot.starting_balance) * Decimal(bot.entry_settings.initial_entry_allocation) / 100
@@ -75,7 +77,7 @@ class BotController:
                 desired_price = Decimal(df.iloc[-1]['close']) * Decimal((100 - bot.entry_settings.signal_distance) / 100 )
                 quantity = quote_qty / desired_price
                 price = desired_price
-                self.placeNewOrder(symbol=symbol, pair=pair, price=price, quantity=quantity, side=side, order_type=exchange.ORDER_TYPE_LIMIT, is_entry=True)              
+                self.placeNewOrder(symbol=symbol, pair=pair, price=price, quantity=quantity, side=side, order_type=exchange.ORDER_TYPE_LIMIT, is_entry=True)
 
             self.session.commit()
 
@@ -159,7 +161,7 @@ class BotController:
             original_buy_order = self.reviveOriginalBuyOrder(order)
             self.tryExitOrder(original_buy_order, pair)
 
-        self.session.commit() 
+        self.session.commit()
 
     def reviveOriginalBuyOrder(self, order):
         """ If sell order was cancelled due to some reason, revive buy order and look to exit again. """
@@ -187,13 +189,13 @@ class BotController:
 
     def updateOpenSellOrder(self, order, pair):
         """
-        Update open sell order based on given params in exit settings. 
+        Update open sell order based on given params in exit settings.
         For now only supports placing stop loss market order when position goes against us ( basically simple oco order variant ).
         """
         exchange = self.exchange
         bot = self.bot
         strategy = self.strategy
-        
+
         candlestick_data = exchange.getSymbolKlines(order.symbol, self.kline_interval, strategy.minimum_period)
         current_price = candlestick_data.iloc[-1]['close']
         stop_loss_active = bot.exit_settings.stop_loss_value is not None
@@ -214,15 +216,15 @@ class BotController:
                     order.status = order_result['status']
                     order.executed_quantity = order_result['executedQty']
 
-                    self.placeNewOrder( 
-                                        symbol=order.symbol, 
+                    self.placeNewOrder(
+                                        symbol=order.symbol,
                                         pair=pair,
                                         order=order,
                                         quantity=quantity,
                                         order_type=order_type,
                                         side=side
-                                        ) 
-	
+                                        )
+
     def tryExitOrder(self, order, pair):
         """ If strategy returns exit signal look to place exit order. """
         bot = self.bot
@@ -232,18 +234,20 @@ class BotController:
 
         candlestick_data = exchange.getSymbolKlines(symbol, self.kline_interval, strategy.minimum_period)
         if bot.exit_settings.exit_on_signal:
-            exit_signal = strategy.shouldExitOrder(candlestick_data)
+            strategy.setUp(candlestick_data)
+            i = len(candlestick_data)-1
+            exit_signal = strategy.shouldExitOrder(i)
 
             if exit_signal:
                 quantity = self.computeQuantity(order)
                 order_type = exchange.ORDER_TYPE_MARKET
                 side = 'SELL'
                 self.placeNewOrder(
-                                symbol, 
+                                symbol,
                                 pair,
-                                order=order, 
-                                quantity=quantity, 
-                                side=side, 
+                                order=order,
+                                quantity=quantity,
+                                side=side,
                                 order_type=order_type
                                 )
 
@@ -271,12 +275,12 @@ class BotController:
                 side = 'SELL'
 
             self.placeNewOrder(
-                                symbol, 
+                                symbol,
                                 pair,
-                                order = order, 
-                                price=price, 
-                                quantity=quantity, 
-                                side=side, 
+                                order = order,
+                                price=price,
+                                quantity=quantity,
+                                side=side,
                                 order_type=order_type
                                 )
 
@@ -317,8 +321,8 @@ class BotController:
             entry_price = None
         elif order is not None:
             position_id = order.position_id
-            entry_price = order.entry_price      
-        
+            entry_price = order.entry_price
+
         new_order_model = Order(
                                 id = str(uuid4()),
                                 position_id = position_id,
@@ -350,7 +354,7 @@ class BotController:
 
     def syncModels(self, pair, order, new_order_model):
         """ Sync pairs and orders to new status """
-        if order is not None:        
+        if order is not None:
             new_order_model.matched_order_id = order.id
             order.is_closed = True
             order.matched_order_id = new_order_model.id
@@ -360,7 +364,7 @@ class BotController:
         if order is None:
             self.bot.current_balance = self.bot.current_balance - Decimal(self.bot.starting_balance) * Decimal(self.bot.entry_settings.initial_entry_allocation) / 100
             pair.active = False
-            pair.current_order_id = new_order_model.id    
+            pair.current_order_id = new_order_model.id
 
     def computeQuantity(self, order):
         """ compute exit quantity so that also partially filled orders can be handled."""
@@ -369,7 +373,7 @@ class BotController:
         elif order.side == 'SELL':
             exit_quantity = Decimal(order.original_quantity) - Decimal(order.executed_quantity)
         return exit_quantity
-    
+
     def simulateOrderInfo(self, order):
         """ Used when BotController is in test mode. Simulates order info returned by exchange."""
         order_status = dict()
@@ -381,7 +385,7 @@ class BotController:
         else:
             minimum_period = int(math.ceil(time_diff / interval_in_ms))
             candlestick_data = self.exchange.getSymbolKlines(order.symbol, self.kline_interval, minimum_period, start_time=order.last_checked_time)
-        
+
         for _, candle in candlestick_data.iterrows():
             lowest_price = candle['low']
             if order.order_type == self.exchange.ORDER_TYPE_LIMIT:
@@ -404,12 +408,12 @@ class BotController:
                     break
         if not order_status:
             order_status['status'] = self.exchange.ORDER_STATUS_NEW
-            order_status['side'] = order.side      
+            order_status['side'] = order.side
             order_status['executedQty'] = 0
 
         order.last_checked_time = new_last_checked_time
         return order_status
-    
+
     def klineIntervalToMs(self, kline_interval:str):
         number = int(kline_interval[:-1])
         unit = kline_interval[-1]

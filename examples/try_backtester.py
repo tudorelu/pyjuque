@@ -9,10 +9,9 @@ sys.path.append(root_path)
 from bot.Exchanges.Binance import Binance
 from pandas import DataFrame
 
-from bot.Strategies.BBRSIStrategy import BBRSIStrategy
-from bot.Strategies.AlwaysBuyStrategy import AlwaysBuyStrategy
+from bot.Strategies.EMAXStrategy import EMACrossover
 from bot.Engine.Backtester import backtest
-from bot.Plotter import PlotData
+from bot.Plotting.Plotter import PlotData
 
 from pprint import pprint
 
@@ -21,9 +20,9 @@ class dotdict(dict):
 	__getattr__ = dict.get
 	__setattr__ = dict.__setitem__
 	__delattr__ = dict.__delitem__
-		
+
 entry_strategy:dotdict = dotdict(dict(
-	strategy_class = AlwaysBuyStrategy,
+	strategy_class = EMACrossover,
 	args = (),
 ))
 
@@ -31,13 +30,13 @@ entry_settings:dotdict = dotdict(dict(
 	# subsequent entries
 	se = dotdict(dict(
 		times = 1,
-		after_profit = 0.99,	
+		after_profit = 0.99,
 		pt_decrease = 0.998,
 	))
 ))
 
-exit_settings:dotdict = dotdict(dict( 
-	pt = 1.045, 
+exit_settings:dotdict = dotdict(dict(
+	pt = 1.045,
 	# trailins stop loss
 	tsl = dotdict(dict(
 		value = 0.985,
@@ -55,8 +54,7 @@ def Main():
 	results = backtest(df, symbol, binance, entry_strategy, entry_settings, exit_settings)
 
 	pprint(results)
-	strategy = entry_strategy.strategy_class(binance, *entry_strategy.args)
-	# strategy.setup(df)
+	strategy = entry_strategy.strategy_class(*entry_strategy.args)
 
 	signals=[
 		dict(points=results['buy_times'], name="buy_times"),
@@ -66,7 +64,11 @@ def Main():
 		dict(points=results['tsl_active_times'], name="tsl_active_times"),
 		dict(points=results['tsl_increase_times'], name="tsl_increase_times")]
 
-	PlotData(df, signals=signals, plot_indicators=strategy.getIndicators(), 
+	plot_indicators = []
+	for indicator in strategy.indicators:
+		plot_indicators.append(dict(name=indicator['indicator_name'], title=indicator['indicator_name']))
+
+	PlotData(df, signals=signals, plot_indicators=plot_indicators,
 	save_plot=True, show_plot=True)
 
 if __name__ == '__main__':

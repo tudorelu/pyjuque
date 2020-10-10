@@ -2,18 +2,18 @@ from bot.Indicators import AddIndicator # pylint: disable=E0401
 from bot.Strategies.BaseStrategy import Strategy
 
 class BBRSIStrategy(Strategy):
-	""" Bollinger Bands x RSI Indicator 
+	""" Bollinger Bands x RSI Indicator
 		Params
 		--
 			`rsi_len` = length of RSI
 			`bb_len` = length of RBollinger Bands
-			`rsi_ob` = Overbought level of RSI	
-			`rsi_os` = Oversold level of RSI	
+			`rsi_ob` = Overbought level of RSI
+			`rsi_os` = Oversold level of RSI
 	"""
-	def __init__(self, 
-		rsi_len = 8, 
-		bb_len = 100, 
-		rsi_ob = 50, 
+	def __init__(self,
+		rsi_len = 8,
+		bb_len = 100,
+		rsi_ob = 50,
 		rsi_os = 50,):
 
 		self.rsi_ob = rsi_ob
@@ -21,6 +21,8 @@ class BBRSIStrategy(Strategy):
 		self.bb_len = bb_len
 		self.rsi_len = rsi_len
 		self.minimum_period = 100
+
+		self.chooseIndicators()
 
 	def chooseIndicators(self):
 		self.indicators = (dict(indicator_name = 'rsi', col_name = 'rsi', rsi_len = self.rsi_len),
@@ -32,9 +34,9 @@ class BBRSIStrategy(Strategy):
 		if (df["rsi"][i] > self.rsi_ob) and \
 			(df["rsi"][i-1] <= self.rsi_ob) and \
 			(df["open"][i] < df["lbb"][i] < df["close"][i]):
-			return True	
+			return True
 		return False
-	
+
 	def checkShortSignal(self, i):
 		return False
 
@@ -43,6 +45,6 @@ class BBRSIStrategy(Strategy):
 		if (df["rsi"][i] < self.rsi_ob) and \
 			(df["rsi"][i-1] >= self.rsi_ob) and \
 			(df["close"][i] < df["ubb"][i] < df["open"][i]):
-			return True	
+			return True
 		return False
 

@@ -8,13 +8,14 @@ class AlwaysBuyStrategy(Strategy):
 	def __init__(self):
 		""" """
 		self.minimum_period = 10
-	
+		self.chooseIndicators()
+
 	def chooseIndicators(self):
 		self.indicators = None
 
 	def checkLongSignal(self, i):
 		return True
-		
+
 	def checkToExitPosition(self, i):
 		return True
 

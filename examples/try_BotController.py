@@ -24,26 +24,26 @@ def get_session(path='sqlite:///'):
 		return session
 
 def initialize_database(session):
-		""" Function that initializes the database 
+		""" Function that initializes the database
 		by creating a bot with two pairs. """
 		myobject = Bot(
 			name="test_bot_2",
 			quote_asset = 'BTC',
 			starting_balance = 0.1,
 			current_balance = 0.1,
-			test_run=False
+			test_run=True
 		)
 
 		session.add(myobject)
 
 		entrysets = EntrySettings(
-			id =1, 
-			name ='TimStoploss', 
+			id =1,
+			name ='TimStoploss',
 			initial_entry_allocation=1,
 			signal_distance = -1,
 			)
 		exitsets = ExitSettings(
-								id=1, 
+								id=1,
 								name='TimLoss',
 								profit_target=1,
 								stop_loss_value=0,
@@ -86,7 +86,7 @@ def clearOrdersFromDB(session):
 
 def Main():
 	resetOrdersPairs = False
-	session = get_session('sqlite:///pyjuquetest.db')
+	session = get_session('sqlite:///pyjuquetest1.db')
 	# First time you run this, uncomment the next line
 	initialize_database(session)
 	if resetOrdersPairs:

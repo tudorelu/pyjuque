@@ -6,23 +6,19 @@ class Strategy(ABC):
     def __init__(self):
         self.df = None
         self.indicators = None
-    
-    def setUp(self):
-        self.current_price = self.df.iloc[-1]['close']
-        self.chooseIndicators()
+
+    def setUp(self, df):
+        self.df = df
         if self.indicators is not None:
             # Create all asked indicators
             for indicator in self.indicators:
                 # Create a list of all arguments that are not the indicator name or column name
                 exclude_keys = set(['indicator_name', 'col_name'])
                 args = [indicator[k] for k in set(list(indicator.keys())) - exclude_keys]
-                
+
                 AddIndicator(self.df, indicator['indicator_name'], indicator['col_name'], *args)
-    
-    def shouldEntryOrder(self, df):
-        self.df = df
-        self.setUp()
-        i = len(self.df) - 1
+
+    def shouldEntryOrder(self, i):
         long_signal = self.checkLongSignal(i)
         short_signal = self.checkShortSignal(i)
 
@@ -33,18 +29,15 @@ class Strategy(ABC):
         if short_signal:
             raise Exception('Short positions not supported yet.')
         return False
-        
-    def shouldExitOrder(self, df):
-        self.df = df
-        self.setUp()
-        i = len(self.df) - 1
+
+    def shouldExitOrder(self, i):
         exit_signal = self.checkToExitPosition(i)
         return exit_signal
-            
+
     @abstractmethod
     def checkLongSignal(self, i):
         pass
-    
+
     @abstractmethod
     def checkShortSignal(self, i):
         pass
