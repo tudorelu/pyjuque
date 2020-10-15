@@ -41,7 +41,7 @@ def Main():
 		pt = round(Decimal(int(individual[4])) / Decimal(1000), 3)
 		entry_strategy.args = tuple(individual[0:4])
 		exit_settings.pt = pt
-		results = backtest(df, sd, binance, entry_strategy, entry_settings, exit_settings)
+		results = backtest(df, symbol, binance, entry_strategy, entry_settings, exit_settings)
 		return float(results['total_profit_loss'])
 
 	optimiser = StrategyOptimiser(

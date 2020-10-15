@@ -8,7 +8,6 @@ from decimal import Context, Decimal
 from traceback import print_exc
 import math
 
-# TODO some code is repeating below here, rewrite this
 import os
 import sys
 curr_path = os.path.abspath(__file__)
@@ -16,15 +15,20 @@ root_path = os.path.abspath(os.path.join(curr_path, os.path.pardir, os.path.pard
 sys.path.append(root_path)
 from os.path import join, dirname
 from dotenv import load_dotenv
-load_dotenv(join(dirname(__file__), '../../.env'))
-# END TODO
+load_dotenv(join(dirname(__file__), '../.env'))
 
-from bot.Exchanges.Base.BaseExchange import BaseExchange # pylint: disable=E0401
-from bot.Exchanges.Base.Exceptions import InvalidCredentialsException, InternalExchangeException, ExchangeConnectionException # pylint: disable=E0401
+class InvalidCredentialsException(Exception):
+	pass
+
+class InternalExchangeException(Exception):
+	pass
+
+class ExchangeConnectionException(Exception):
+	pass
 
 from pprint import pprint
 
-class Binance(BaseExchange):
+class Binance():
 	""" Wrapper around the Binance REST API """
 
 	ORDER_STATUS_NEW = 'NEW'
@@ -59,17 +63,21 @@ class Binance(BaseExchange):
 		"exchangeInfo": '/api/v3/exchangeInfo',
 		"averagePrice" : '/api/v3/avgPrice',
 		"orderBook" : '/api/v3/depth',
-		"account" : '/api/v3/account'
+		"account" : '/api/v3/account',
+		"ticker": "/api/v3/ticker/bookTicker"
 	}
 
 	SYMBOL_DATAS = dict()
+	TICKER_DATA = dict()
+	TICKER_UPDATE_TIME = None
 
 	def __init__(self, filename=None, api_key=None, secret_key=None, get_credentials_from_env=False):
 		
 		self.api_keys = None
 		self.has_credentials = False
 
-		self._updateSymbolsData()
+		self.updateSymbolsData()
+		self.updateTickerData()
 
 		if get_credentials_from_env:
 			env_api_key = os.getenv('BINANCE_API_KEY')
@@ -157,10 +165,29 @@ class Binance(BaseExchange):
   
 		return symbols_list
 
-	def _updateSymbolsData(self):
+	def updateSymbolsData(self):
 		symbols = self._getSymbolsData()
 		for symb in symbols:
 			Binance.SYMBOL_DATAS[symb['symbol']] = symb
+
+	def _getTickerData(self):
+		""" Gets All symbols' data from Binance """
+		url = Binance.BASE_URL + Binance.ENDPOINTS["ticker"]
+		data = self._get(url)
+		if not Binance.isValidResponse(data):
+			return []
+		
+		symbols_list = []
+		for pair in data['payload']:
+			symbols_list.append(pair)
+
+		return symbols_list
+
+	def updateTickerData(self):
+		symbols = self._getTickerData()
+		self.TICKER_UPDATE_TIME = time.time()
+		for symb in symbols:
+			Binance.TICKER_DATA[symb['symbol']] = symb
 
 	def addCredentials(self, api_key, secret_key):
 		""" Adds API & SECRET keys into the object's memory """
@@ -209,10 +236,66 @@ class Binance(BaseExchange):
   
 		return symbols_list
 
-	def getOrderBookData(self, symbol):
+	def getOrderBook(self, symbol, limit=100):
 		""" Gets Order Book data for symbol """
-		return None
+
+		url = Binance.BASE_URL + Binance.ENDPOINTS["orderBook"]\
+			 + "?&symbol=" + str(symbol) + "&limit=" + str(limit)
+		
+		data = self._get(url)
+
+		if not Binance.isValidResponse(data):
+			print(data)
+			raise Exception(data['msg'])
+
+		return data
 	
+	def getOrderBookAveragePrice(self, symbol, side, quantity, order_book=None):
+		#TODO test it
+		""" Calculates the average price we would pay / receive per unit of `symbol` 
+		if we wanted to trade `quantity` of that `symbol`, based on its order book"""
+		
+		obl_index = 0	# index of current order_book limit
+		order_book_limits = [100, 500, 1000, 5000]	# possible order_book limits
+		if order_book is not None:
+			order_book = self.getOrderBook(symbol=symbol, limit=order_book_limits[obl_index])
+
+		# print("Initial order book looks like")
+		# pprint(order_book)
+		order_book_side = order_book['asks'] \
+			if side == Binance.SIDE_SELL else order_book['bids']
+
+		quantity = Decimal(quantity)
+		i, orders, price = 0, [], Decimal(0)
+		accounted_for_quantity = Decimal(0)
+
+		qtdif = Decimal(1)
+		while accounted_for_quantity < quantity or qtdif > Decimal(0.0001):
+			try:
+				order = order_book_side[i]
+			except IndexError:
+				raise InternalExchangeException("There are not enough orders in the Order Book.")
+			qty = min(Decimal(order[1]), quantity - accounted_for_quantity)
+			price += Decimal(order[0]) * qty
+			accounted_for_quantity += qty
+			qtdif = abs(Decimal(1) - accounted_for_quantity / quantity)
+			i += 1
+			if i >= order_book_limits[obl_index] - 1:
+				# print("Reached Order Book Limit of ", i, "Try to get some more")
+				if obl_index < 3:
+					obl_index += 1
+					order_book = self.getOrderBook(symbol=symbol, limit=order_book_limits[obl_index])
+					# print("Got new order book with limit", order_book_limits[obl_index])
+					order_book_side = order_book['asks'] \
+						if side == Binance.SIDE_SELL else order_book['bids']
+					# print(i, len(order_book_side))
+					# print(qtdif)
+				else:
+					# print(symbol, side, quantity)
+					raise InternalExchangeException("There are not enough orders in the Order Book.")
+
+		return price / quantity
+
 	def _getSymbolKlinesExtra(self, symbol:str, interval:str, 
 	limit:int=1000, end_time=False, cast_to:type=float):
 		""" Gets candlestick data for one symbol if more than 1000
@@ -334,7 +417,7 @@ class Binance(BaseExchange):
 		return self._post(url, params, self.headers)
 
 	def placeMarketOrder(self, symbol:str, side:str, amount:str, quote_amount=None, 
-	test:bool=False, round_up_amount=False, custom_id=False, verbose=True):
+	test:bool=False, round_up_amount=False, custom_id=False, verbose=False):
 		""" Places side (buy/sell) market order for amount of symbol.	"""
 		if verbose:
 			print("Placing MarketOrder with params:")
@@ -361,8 +444,9 @@ class Binance(BaseExchange):
 			
 		return self.placeOrder(params, test)
 
-	def placeLimitOrder(self, symbol:str, price, side:str, amount, quote_amount=None, 
-	test:bool=False, round_up_price=False, round_up_amount=False, custom_id=False, verbose=True):
+	def placeLimitOrder(self, symbol:str, price, side:str, amount, 
+	quote_amount=None, test:bool=False, round_up_price=False, time_in_force=None,
+	round_up_amount=False, custom_id=False, verbose=False):
 		""" Places side (buy/sell) limit order for amount of symbol at price. """
 		if verbose:
 			print("Placing LimitOrder with params:")
@@ -380,6 +464,9 @@ class Binance(BaseExchange):
 		if custom_id is not False:
 			params['newClientOrderId'] = custom_id
 				
+		if time_in_force in ['GTC', 'IOC', 'FOK']:
+			params['timeInForce'] = time_in_force
+
 		if amount is not None:
 			params['quantity'] = format(self.toValidQuantity(symbol, 
 																		amount, round_up_amount), 'f')
@@ -390,8 +477,9 @@ class Binance(BaseExchange):
 			pprint(params)
 		return self.placeOrder(params, test)
 
-	def placeStopLossMarketOrder(self, symbol:str, price, side:str,  amount, quote_amount=None, 
-	test:bool=False, round_up_price=False, round_up_amount=False, custom_id=False, verbose=True):
+	def placeStopLossMarketOrder(self, symbol:str, price, side:str,  amount, 
+	quote_amount=None, test:bool=False, round_up_price=False, round_up_amount=False, 
+	custom_id=False, verbose=False):
 		""" Places a STOP_LOSS market order for amount of symbol at price. """
 		if verbose:
 			print("Placing StopLossMarketOrder with params:")
@@ -421,7 +509,7 @@ class Binance(BaseExchange):
 		return self.placeOrder(params, test)
 
 	def placeStopLossLimitOrder(self, symbol:str, price, stop_price, side:str, amount, quote_amount=None, 
-	test:bool=False, round_up_price=False, round_up_amount=False, custom_id=False, verbose=True):
+	test:bool=False, round_up_price=False, round_up_amount=False, custom_id=False, verbose=False):
 		""" Places a STOP_LOSS_LIMIT market order for amount of symbol at price. """
 		if verbose:
 			print("Placing StopLossLimitOrder with params:")
@@ -453,7 +541,7 @@ class Binance(BaseExchange):
 		return self.placeOrder(params, test)
 
 	def placeTakeProfitMarketOrder(self, symbol:str, price, side:str, amount, quote_amount=None, 
-	test:bool=False, round_up_price=False, round_up_amount=False, custom_id=False, verbose=True):
+	test:bool=False, round_up_price=False, round_up_amount=False, custom_id=False, verbose=False):
 		""" Places a TAKE_PROFIT market order for amount of symbol at price. """
 		if verbose:
 			print("Placing TakeProfitMarketOrder with params:")
@@ -482,7 +570,7 @@ class Binance(BaseExchange):
 		return self.placeOrder(params, test)
 
 	def placeTakeProfitLimitOrder(self, symbol:str, price, stop_price, side:str, amount, quote_amount=None, 
-	 test:bool=False, round_up_price=False, round_up_amount=False, custom_id=False, verbose=True):
+	test:bool=False, round_up_price=False, round_up_amount=False, custom_id=False, verbose=False):
 		""" Places a TAKE_PROFIT_LIMIT order for amount of symbol at price. """
 		
 		if verbose:
@@ -513,7 +601,6 @@ class Binance(BaseExchange):
 			pprint(params)
 
 		return self.placeOrder(params, test)
-
 
 	def cancelOrder(self, symbol, order_id, is_custom_id=False):
 		""" Cancels order given order id """
@@ -608,7 +695,7 @@ class Binance(BaseExchange):
 		symbol = symbol.upper()
 
 		if not self.SYMBOL_DATAS.__contains__(symbol):
-			self._updateSymbolsData()
+			self.updateSymbolsData()
 			if not self.SYMBOL_DATAS.__contains__(symbol):
 				raise InternalExchangeException(\
 					"Could not find symbol data of "+symbol)
@@ -629,7 +716,6 @@ class Binance(BaseExchange):
 
 		return number
 
-
 	def toValidQuantity(self, symbol, desired_quantity, round_up:bool=False) \
 		-> Decimal():
 		""" Returns the minimum quantity of a symbol we can buy,
@@ -640,7 +726,7 @@ class Binance(BaseExchange):
 		symbol = symbol.upper()
 		# Check whether SD exists
 		if not self.SYMBOL_DATAS.__contains__(symbol):
-			self._updateSymbolsData()
+			self.updateSymbolsData()
 			if not self.SYMBOL_DATAS.__contains__(symbol):
 				raise InternalExchangeException(\
 					"Could not find symbol data of "+symbol)
@@ -662,7 +748,6 @@ class Binance(BaseExchange):
 
 		return quantity
 
-
 	def updateSQLOrderModel(self, order, new_order_response, bot):
 		""" Updates an order based on it's state on the exchange given by 
 		new_order_response. Should be part of the exchange interface  """
@@ -670,7 +755,7 @@ class Binance(BaseExchange):
 		if order.is_test:
 			order.take_profit_price = self.toValidPrice(
 				symbol = order.symbol,
-				desired_price = Decimal(order.entry_price) * (Decimal(100) + Decimal(bot.profit_target))/Decimal(100), 
+				desired_price = Decimal(order.entry_price) * (Decimal(100) + Decimal(bot.profit_target)) / Decimal(100), 
 				round_up=True)
 
 		else:
@@ -678,7 +763,7 @@ class Binance(BaseExchange):
 			order.entry_price = new_order_response['price']
 			order.take_profit_price = self.toValidPrice(
 				symbol = order.symbol,
-				desired_price = Decimal(new_order_response['price']) * Decimal(bot.profit_target), 
+				desired_price = Decimal(new_order_response['price']) * (Decimal(100) + Decimal(bot.profit_target)) / Decimal(100), 
 				round_up=True)
 			order.original_quantity =  Decimal(new_order_response['origQty'])
 			order.executed_quantity =  Decimal(new_order_response['executedQty'])

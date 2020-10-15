@@ -60,12 +60,12 @@ class OrderManagement:
 			df = exchange.getSymbolKlines(symbol, "5m", limit=strategy.minimum_period)
 			l = len(df) - 1
 			strategy.setup(df)
+
+			# if long bot
 			buy_signal = strategy.checkBuySignal(l)
-			
 			if buy_signal:
 					
 					print("BUY! on", symbol)
-					take_profit = bot.profit_target
 					desired_price = Decimal(df['close'][l])
 					quote_qty =  Decimal(bot.starting_balance) * Decimal(bot.trade_allocation) / Decimal(100)
 					desired_quantity = quote_qty / desired_price
@@ -77,8 +77,6 @@ class OrderManagement:
 							is_entry = True, 
 							entry_price=desired_price, 
 							original_quantity = desired_quantity,
-							executed_quantity = 0,
-							is_closed = False, 
 							is_test = bot.test_run)
 
 					session.add(order)
@@ -97,10 +95,10 @@ class OrderManagement:
 
 					if exchange.isValidResponse(order_response):
 							print("SUCCESSFUL ORDER! on", symbol)
-							bot.current_balance = bot.current_balance - quote_qty
 							exchange.updateSQLOrderModel(order, order_response, bot)
 							pair.current_order_id = order.id
 							pair.active = False
+							bot.current_balance = bot.current_balance - quote_qty
 							session.commit()
 					else:
 							print("ERROR placing order! on", symbol)
@@ -123,50 +121,28 @@ class OrderManagement:
 			order:Order = session.query(Order).get(order.id)
 
 			print("Checking", order, "on", symbol)
-			# If order was test (sim), then we need to simulate the market 
-			# in order to decide whether it would have been filled or not.
-			# TODO: this is accurate for low amounts, if we placed a large 
-			# order we need to take volume into account as well
 			if order.is_test:
-				df = exchange.getSymbolKlines(order.symbol, '5m', 50)
-				l = len(df) - 1
-				filled = False
-				
-				# loop through the candles and look at the ones after the order was placed
-				for index, row in df.iterrows():
-					if datetime.fromtimestamp(row['time']/1000) > order.timestamp:
-						if order.is_entry:
-							if row['low'] < order.entry_price:
-								order.status = exchange.ORDER_STATUS_FILLED
-								order.executed_quantity = order.original_quantity
-								order.is_closed = True
-								filled = True
-								session.commit()
-								break	
-
-						elif not order.is_entry:
-							if row['high'] > Decimal(order.entry_price):
-								order.status = exchange.ORDER_STATUS_FILLED
-								order.executed_quantity = order.original_quantity
-								order.is_closed = True
-								filled = True
-								session.commit()	
-								break
+				self.updateTestOrder(order)
 			else:
-				exchange_order_info = exchange.getOrder(symbol, order.id)
+				exchange_order_info = exchange.getOrder(
+					symbol = symbol, 
+					order_id = order.id, 
+					is_custom_id = True)
 				if not exchange.isValidResponse(exchange_order_info):
+					print("Error checking order, will try again next time")
 					return
-				order.status = exchange_order_info['status']
-				order.executed_quantity = exchange_order_info['executedQty']
-			
-			session.commit()
+				exchange.updateSQLOrderModel(order, exchange_order_info, bot)
+				session.commit()
 
 			# Now check if order was filled
 			if order.status == exchange.ORDER_STATUS_FILLED:
-					
 				print("FILLED!")
 				if order.is_entry:
-				# If this entry order has been filled, place corresponding exit order
+					# If this entry order has been filled, place the corresponding exit order
+
+					entry_price = Decimal(order.entry_price) * (Decimal(100) + bot.profit_target)/Decimal(100)
+					stop_loss_price = Decimal(order.entry_price) * bot.stop_loss_target/Decimal(100)
+
 					print("Entry order, place exit order! on", symbol)
 					new_order_model = Order(
 						bot_id = bot.id,
@@ -174,17 +150,13 @@ class OrderManagement:
 						status = "NEW",
 						side = "SELL", 
 						is_entry = False, 
-						entry_price = Decimal(order.entry_price) * (Decimal(100) + bot.profit_target)/Decimal(100), 
-						stop_loss_price = Decimal(order.entry_price) * bot.stop_loss_target/Decimal(100), 
+						entry_price = entry_price, 
+						stop_loss_price = stop_loss_price, 
 						original_quantity = order.executed_quantity,
-						executed_quantity = 0,
-						is_closed = False, 
 						is_test = bot.test_run)
 
 					session.add(new_order_model)
 					session.commit()
-
-					exit_price = order.take_profit_price
 					
 					new_order_response = dict()
 					if bot.test_run:
@@ -192,10 +164,10 @@ class OrderManagement:
 					else:
 						new_order_response = exchange.placeLimitOrder(
 							symbol = symbol, 
-							price = exit_price,
+							price = entry_price,
 							side = "SELL",
 							amount = order.executed_quantity,
-							custom_id=new_order_model.id)
+							custom_id = new_order_model.id)
 						
 					if exchange.isValidResponse(new_order_response):
 						exchange.updateSQLOrderModel(new_order_model, new_order_response, bot)
@@ -208,21 +180,43 @@ class OrderManagement:
 					else:
 						session.query(Order).filter(Order.id==new_order_model.id).delete()
 						session.commit()
-				
 				else:
 				# If this exit order has been filled, resume trading
 					print("Exit order, resume trading! on", symbol)
 					order.is_closed = True
 					pair.active = True
 					pair.current_order_id = None
+					bot.current_balance = bot.current_balance + order.entry_price * order.executed_quantity
 					session.commit()
 
-			# If the order has been cancelled, set the order to close and start from beginning
-			# TODO If exit order was cancelled we shouldn't start from the beginning, we should
-			# replace the exit order to get rid of the coins that we bought
-			elif order.status == exchange.ORDER_STATUS_CANCELED:
-				print("CANCELED! Resume trading on", symbol)
-				order.is_closed = True
-				pair.active = True
-				pair.current_order_id = None
-				session.commit()
+
+	def updateTestOrder(self, order):
+			"""
+				If order was test (simulated), then we need to simulate the market 
+				in order to decide whether it would have been filled or not.
+				TODO: this is accurate for low amounts, if we placed a large 
+				order we need to take volume into account as well]
+			"""
+			session = self.session
+			df = exchange.getSymbolKlines(order.symbol, '5m', 50)
+			l = len(df) - 1
+			# loop through the candles and look at the ones after the order was placed
+			for index, row in df.iterrows():
+				if datetime.fromtimestamp(row['time']/1000) > order.timestamp:
+					if order.is_entry:
+						if row['low'] < order.entry_price:
+							order.status = exchange.ORDER_STATUS_FILLED
+							order.executed_quantity = order.original_quantity
+							order.is_closed = True
+							session.commit()
+							return True
+
+					elif not order.is_entry:
+						if row['high'] > Decimal(order.entry_price):
+							order.status = exchange.ORDER_STATUS_FILLED
+							order.executed_quantity = order.original_quantity
+							order.is_closed = True
+							session.commit()
+							return True
+
+			return False
