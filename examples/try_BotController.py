@@ -88,13 +88,13 @@ def Main():
     resetOrdersPairs = False
     session = get_session('sqlite:///pyjuquetest1.db')
     # First time you run this, uncomment the next line
-    initialize_database(session)
+    # initialize_database(session)
     if resetOrdersPairs:
         clearOrdersFromDB(session)
 
     bot = session.query(Bot).filter_by(name='test_bot_2').first()
     # input your path to credentials here.
-    exchange = Binance(filename=)
+    exchange = Binance(get_credentials_from_env=True)
     strategy = AlwaysBuyStrategy()
     om = BotController(session, bot, exchange, strategy)
 
