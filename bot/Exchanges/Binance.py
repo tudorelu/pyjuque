@@ -14,8 +14,9 @@ curr_path = os.path.abspath(__file__)
 root_path = os.path.abspath(os.path.join(curr_path, os.path.pardir, os.path.pardir))
 sys.path.append(root_path)
 from os.path import join, dirname
-from dotenv import load_dotenv
-load_dotenv(join(dirname(__file__), '../.env'))
+
+from dotenv import load_dotenv, find_dotenv
+load_dotenv(find_dotenv())
 
 class InvalidCredentialsException(Exception):
 	pass
@@ -27,12 +28,12 @@ class ExchangeConnectionException(Exception):
 	pass
 
 from pprint import pprint
+from enum import Enum
 
-class Binance():
+class Binance(BaseExchange):
 	""" Wrapper around the Binance REST API """
 
 	ORDER_STATUS_NEW = 'NEW'
-	
 	ORDER_STATUS_PARTIALLY_FILLED = 'PARTIALLY_FILLED'
 	ORDER_STATUS_FILLED = 'FILLED'
 	ORDER_STATUS_CANCELED = 'CANCELED'
@@ -64,7 +65,8 @@ class Binance():
 		"averagePrice" : '/api/v3/avgPrice',
 		"orderBook" : '/api/v3/depth',
 		"account" : '/api/v3/account',
-		"ticker": "/api/v3/ticker/bookTicker"
+		"ticker": '/api/v3/ticker/bookTicker',
+		"tickprice": '/api/v3/ticker/24hr'
 	}
 
 	SYMBOL_DATAS = dict()
@@ -113,11 +115,10 @@ class Binance():
 			else:
 				data = payload
 				data['url'] = url
-				data['success'] = True
 		except Exception as e:
 			print("Exception occured when trying to GET from "+url)
 			print_exc()
-			data = {'code': '-1', 'url':url, 'msg': e, 'success':False}
+			data = {'code': '-1', 'url':url, 'msg': e}
 		return data
 
 	def _post(self, url, params=None, headers=None,):
@@ -126,11 +127,10 @@ class Binance():
 			response = requests.post(url, params=params, headers=headers)
 			data = json.loads(response.text)
 			data['url'] = url
-			data['success'] = True
 		except Exception as e:
 			print("Exception occured when trying to POST to "+url); print(e); print("Params"); print(params)
 			print_exc()
-			data = {'code': '-1', 'url':url, 'msg': e, 'success':False}
+			data = {'code': '-1', 'url':url, 'msg': e}
 		return data
 
 	def _delete(self, url, params=None, headers=None):
@@ -139,11 +139,10 @@ class Binance():
 			response = requests.delete(url, params=params, headers=headers)
 			data = json.loads(response.text)
 			data['url'] = url
-			data['success'] = True
 		except Exception as e:
 			print("Exception occured when trying to DELETE from "+url); print(e); print("Params"); print(params)
 			print_exc()
-			data = {'code': '-1', 'url':url, 'msg': e, 'success':False, 'params':params}
+			data = {'code': '-1', 'url':url, 'msg': e, 'params':params}
 		return data
 
 	def _signRequest(self, params):
@@ -171,7 +170,7 @@ class Binance():
 			Binance.SYMBOL_DATAS[symb['symbol']] = symb
 
 	def _getTickerData(self):
-		""" Gets All symbols' data from Binance """
+  		""" Gets All symbols' data from Binance """
 		url = Binance.BASE_URL + Binance.ENDPOINTS["ticker"]
 		data = self._get(url)
 		if not Binance.isValidResponse(data):
@@ -194,6 +193,12 @@ class Binance():
 		new_keys = dict(api_key=api_key, secret_key=secret_key)
 		self.api_keys = new_keys
 		self.has_credentials = True
+
+	def getCurrentTickPrice(self, symbol):
+		url = Binance.BASE_URL + Binance.ENDPOINTS['tickprice']
+		params = {'symbol': symbol.upper()}
+		tick_info = self._get(url, params, self.headers)
+		return tick_info
 
 	def getAccountData(self):
 		""" Gets data for Account connected to API & SECRET Keys given """	
@@ -334,7 +339,7 @@ class Binance():
 		return df
 
 	def getSymbolKlines(self, symbol:str, interval:str, 
-	limit:int=1000, end_time:any=False, cast_to:type=float):
+	limit:int=1000, end_time:any=False, start_time:any=False, cast_to:type=float):
 		"""
 		Gets candlestick data for one symbol 
 		
@@ -364,6 +369,8 @@ class Binance():
 		params = '?&symbol='+symbol+'&interval='+interval+'&limit='+str(limit)
 		if end_time:
 			params = params + '&endTime=' + str(int(end_time))
+		if start_time:
+			params = params + '&startTime=' + str(int(start_time))
 
 		url = Binance.BASE_URL + Binance.ENDPOINTS['klines'] + params
 
@@ -391,7 +398,6 @@ class Binance():
 		""" Places order on exchange given a dictionary of parameters.
 			Check this link for more info on the required parameters: 
 			https://github.com/binance-exchange/binance-official-api-docs/blob/master/rest-api.md#new-order--trade
-
 			Parameters
 			--
 				params dict:
@@ -399,7 +405,6 @@ class Binance():
 					such as SIDE (buy/sell), TYPE (market/limit/oco), SYMBOL, etc.
 				test bool:
 					Decides whether this will be a test order or not.
-
 		"""
 
 		params['symbol'] = params['symbol'].upper()
@@ -671,7 +676,6 @@ class Binance():
 		so that it's between 1 (inclusive) and 10 (exclusive)
 		
 		_get10Factor(0.00000164763) = 6
-
 		_get10Factor(1600623.3) = -6
 		"""
 		p = 0
@@ -753,21 +757,17 @@ class Binance():
 		new_order_response. Should be part of the exchange interface  """
 
 		if order.is_test:
-			order.take_profit_price = self.toValidPrice(
-				symbol = order.symbol,
-				desired_price = Decimal(order.entry_price) * (Decimal(100) + Decimal(bot.profit_target)) / Decimal(100), 
-				round_up=True)
-
-		else:
+			if order.side == 'BUY':
+  				order.entry_price = order.price
+			
+		if not order.is_test:
 			order.timestamp = new_order_response['transactTime']
-			order.entry_price = new_order_response['price']
-			order.take_profit_price = self.toValidPrice(
-				symbol = order.symbol,
-				desired_price = Decimal(new_order_response['price']) * (Decimal(100) + Decimal(bot.profit_target)) / Decimal(100), 
-				round_up=True)
+			order.price = new_order_response['price']
 			order.original_quantity =  Decimal(new_order_response['origQty'])
 			order.executed_quantity =  Decimal(new_order_response['executedQty'])
 			order.status = new_order_response['status']
 			order.side = new_order_response['side']
+			if order.side == 'BUY':
+				order.entry_price = new_order_response['price']
 
 		return order

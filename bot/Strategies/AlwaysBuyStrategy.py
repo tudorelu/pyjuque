@@ -1,52 +1,23 @@
-from bot.Indicators import AddIndicator
+from bot.Strategies.BaseStrategy import Strategy
 
-class AlwaysBuyStrategy:
+class AlwaysBuyStrategy(Strategy):
 	""" Always Buy Strategy:
 	Buys when low < close and sells when close > low
 	"""
 
 	def __init__(self):
 		""" """
-		self.minimum_period = 5
-	
-	def setup(self, df):
-		self.df = df
+		self.minimum_period = 10
+		self.chooseIndicators()
 
-	def getIndicators(self):
-		return []
+	def chooseIndicators(self):
+		self.indicators = None
 
-	def checkBuySignal(self, i):
-		df = self.df
-		if df["low"][i] < df["close"][i]:
-			return True
-	
+	def checkLongSignal(self, i):
+		return True
+
+	def checkToExitPosition(self, i):
+		return True
+
+	def checkShortSignal(self, i):
 		return False
-		
-	def checkSellSignal(self, i):
-		df = self.df
-		if df["close"][i] > df["low"][i]:
-			return True
-	
-		return False
-
-	def getBuySignalsList(self):
-		df = self.df
-		length = len(df) - 1
-		signals = []
-		for i in range(1, length):
-			res = self.checkBuySignal(i)
-			if res:
-				signals.append([df['time'][i], df['close'][i]])
-
-		return signals
-
-	def getSellSignalsList(self):
-		df = self.df
-		length = len(df) - 1
-		signals = []
-		for i in range(1, length):
-			res = self.checkSellSignal(i)
-			if res:
-				signals.append([df['time'][i], df['close'][i]])
-
-		return signals
