@@ -62,6 +62,8 @@ def GetPlotData(df,
 		if df.__contains__(ind['name']):
 			if ind.get('showlegend', None) is None:
 				ind['showlegend'] = True
+			if ind.get('xvalue', None) is None:
+				ind['xvalue'] = 'time'
 			if ind.get('color', None) is None:
 				ind['color'] = None # 'rgba(102, 207, 255, 50)'
 			if ind.get('yaxis', None) is None:
@@ -79,7 +81,7 @@ def GetPlotData(df,
 
 			if ind['type'] == 'bar':
 				trace = go.Bar(
-					x = df['time'], 
+					x = df[ind['xvalue']], 
 					y = df[ind['name']], 
 					name = ind['title'],
 					xaxis = ind['xaxis'], 
@@ -90,7 +92,7 @@ def GetPlotData(df,
 				  marker = dict(color = ind['color']))
 			else:
 				trace = go.Scatter( 
-					x = df['time'],
+					x = df[ind['xvalue']],
 					y = df[ind['name']], 
 					name = ind['title'],
 					mode = ind['mode'], 

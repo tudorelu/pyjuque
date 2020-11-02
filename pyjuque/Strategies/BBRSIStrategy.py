@@ -40,7 +40,7 @@ class BBRSIStrategy(Strategy):
 	def checkShortSignal(self, i):
 		return False
 
-	def checkToExitPosition(self, i):
+	def checkToExitLongPosition(self, i):
 		df = self.df
 		if (df["rsi"][i] < self.rsi_ob) and \
 			(df["rsi"][i-1] >= self.rsi_ob) and \

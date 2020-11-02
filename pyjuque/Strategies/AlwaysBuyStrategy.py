@@ -16,8 +16,5 @@ class AlwaysBuyStrategy(Strategy):
 	def checkLongSignal(self, i):
 		return True
 
-	def checkToExitPosition(self, i):
-		return True
-
 	def checkShortSignal(self, i):
 		return False

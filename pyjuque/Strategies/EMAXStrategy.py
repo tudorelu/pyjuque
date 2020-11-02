@@ -22,6 +22,3 @@ class EMACrossover(Strategy):
 
     def checkShortSignal(self, i):
         return False
-
-    def checkToExitPosition(self, i):
-        return True

@@ -1,6 +1,7 @@
-from pyjuque.Indicators import AddIndicator # pylint: disable=E0401
+import pandas as pd
+from pyjuque.Indicators import AddIndicator
 from abc import ABC, abstractmethod
-
+from pprint import pprint
 class Strategy(ABC):
     def __init__(self):
         self.df = None
@@ -11,40 +12,50 @@ class Strategy(ABC):
         if self.indicators is not None:
             # Create all asked indicators
             for indicator in self.indicators:
-                # Create a list of all arguments that are not the indicator name or column name
-                exclude_keys = set(['indicator_name', 'col_name'])
-                args = [indicator[k] for k in set(list(indicator.keys())) - exclude_keys]
+                exclude_keys = set(['indicator_name', 'col_name', 'indicator_function'])
+                args = [indicator[k] 
+                    for k in set(list(indicator.keys())) - exclude_keys]
+                if 'indicator_function' in indicator.keys():
+                    col_name = indicator['col_name']
+                    indicator_function = indicator['indicator_function']
+                    ret = indicator_function(self.df, *args)
+                    
+                    cols_dict = dict()
+                    i = 0
+                    for cname in col_name:
+                        cols_dict[cname] = ret[i]
+                        i += 1
 
-                AddIndicator(self.df, indicator['indicator_name'], indicator['col_name'], *args)
+                    self.df = self.df.assign(**cols_dict) 
 
-    def shouldEntryOrder(self, i):
-        long_signal = self.checkLongSignal(i)
-        short_signal = self.checkShortSignal(i)
+                else:
+                    # Create a list of all arguments that are not the 
+                    # indicator name or column name
+                    AddIndicator(
+                        self.df, indicator['indicator_name'], 
+                        indicator['col_name'], *args)
 
-        if long_signal and short_signal:
-            raise Exception('Cannot enter long and short signal at the same time')
-        if long_signal:
-            return long_signal
-        if short_signal:
-            raise Exception('Short positions not supported yet.')
-        return False
-
-    def shouldExitOrder(self, i):
-        exit_signal = self.checkToExitPosition(i)
-        return exit_signal
+    @abstractmethod
+    def chooseIndicators(self):
+        """ Checks whether we have a long signal """
+        pass
 
     @abstractmethod
     def checkLongSignal(self, i):
+        """ Checks whether we have a long signal """
         pass
 
     @abstractmethod
     def checkShortSignal(self, i):
+        """ Checks whether we have a short signal """
         pass
 
-    @abstractmethod
-    def checkToExitPosition(self, i):
-        pass
+    def checkToExitLongPosition(self, i):
+        """ Checks whether we should exit a long position
+        (Most times this is equivalent to checkShortSignal) """
+        return self.checkShortSignal(i)
 
-    @abstractmethod
-    def chooseIndicators(self):
-        pass
+    def checkToExitShortPosition(self, i):
+        """ Checks whether we should exit a short position
+        (Most times this is equivalent to checkLongSignal) """
+        return self.checkLongSignal(i)

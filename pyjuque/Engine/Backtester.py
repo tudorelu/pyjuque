@@ -114,7 +114,7 @@ def backtest(df, symbol, exchange,
 		# Have we already opened a position?
 		if last_buy is None:
 			# If no, check whether the strategy is fulfilled at this point in time
-			strategy_result = strategy.shouldEntryOrder(i)
+			strategy_result = strategy.checkLongSignal(i)
 
 			if strategy_result:
 				# If strategy is fulfilled, buy the coin
