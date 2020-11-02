@@ -1,7 +1,8 @@
 ## **Py**thon **Ju**ju **Qu**ant **E**ngine
 **PYJUQUE**   &nbsp; &nbsp;  *(pai-jook)*
+*(**Py**-thon **Ju**-ju **Qu**-ant **E**-ngine)*
 
-This project implements the basic functionality needed to engage in algorithmic trading of cryptocurrencies. It can be regarded as a starting point for more complex trading bots, which implements the following features:
+This project implements the basic functionality required to engage in algorithmic trading. It can be regarded as a starting point for more complex trading bots, which implements the following features:
 
 ### Structure
 Code is contained in `pyjuque`. Tests are in `tests`.
@@ -14,14 +15,14 @@ At `pyjuque/Exchanges`.
 
   - [Binance](/pyjuque/Exchanges/Binance.py) - based on the official [REST API](https://github.com/binance-exchange/binance-official-api-docs/blob/master/rest-api.md)
 
-contains some tests
-
 ### Backtesting
 At `pyjuque/Engine/Backtester`. 
 
-Backtester infrastructure currently supports 
-  - stop loss, trailing stop loss &
-  - subsequent entries logic (DCA)
+Backtester infrastructure currently supports:
+  - stop loss, trailing stop loss
+  - subsequent entries logic (backtest as if Dollar Cost Averaging is enabled)
+
+Checkout this [example](/examples/try_backtester.py).
 
 ### Indicators
 At `pyjuque/Indicators`. 
@@ -45,13 +46,12 @@ Currently contains a few basic strategies. More strategies will be added togethe
 ### Strategy Optimiser 
 At `pyjuque/Strategies/StrategyOptimiser.py`. 
 
-Currently allows for optimising strategy parameters using a genetic algorithm.
-
+Currently allows for optimising strategy parameters using a genetic algorithm. Checkout this [example](/examples/try_strategy_optimiser.py).
 
 ### Local Order Book
 At `pyjuque/Engine/OrderBook.py`. 
 
-Creates and stores a local order book for the specified symbols. Order Book is updated every second through a websocket connection to the Exchange (currently Binance). 
+Creates and stores a local order book for the specified symbols. Order Book is updated every second through a websocket connection to the Exchange (currently Binance). Checkout this [example](/examples/try_local_order_book.py).
 
 ```py
 from pyjuque.Engine.OrderBook import OrderBook
@@ -100,17 +100,18 @@ Run them with the command `nose2`
 ### Bot Controller
 At `pyjuque/Engine/BotController.py`. 
 
-A module which will handle the buying and selling of assets, given simple or more advanced rules, allowing us to run a strategy indefinitely. 
+A module which will handle the buying and selling of assets, given simple or more advanced rules, allowing us to run a strategy indefinitely. Checkout this [example](/examples/try_BotController.py).
 
 ##### Current Features:
 - Placing Entry (Buy) Orders on Signal 
+- Market, Limit & Stop Loss orders 
 - Placing Exit Order when Entry Order was fulfilled
+- Trading below/above signal by some %
 
 ##### Future Features: 
-- Market & OCO orders
+- OCO orders
 - Selling on signals
-- Trading below/above signal by some %
-- Stop loss & Trailing stop loss
+- Trailing stop loss
 - Multiple trade entries (in case trade goes against you)
 
 ### State persistence 

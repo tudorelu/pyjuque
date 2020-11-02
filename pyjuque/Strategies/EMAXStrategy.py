@@ -9,8 +9,8 @@ class EMACrossover(Strategy):
 
     def chooseIndicators(self):
         self.indicators = [
-					dict(indicator_name  = 'sma', col_name = 'sma_fast', period = 5), 
-					dict(indicator_name = 'sma', col_name = 'sma_slow', period = 25)
+					dict(indicator_name  = 'sma', col_name = 'sma_fast', source='close', period = 5), 
+					dict(indicator_name = 'sma', col_name = 'sma_slow', source='close', period = 25)
 				]
 
     def checkLongSignal(self, i):
