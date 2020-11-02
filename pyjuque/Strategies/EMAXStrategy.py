@@ -1,4 +1,4 @@
-from bot.Strategies.BaseStrategy import Strategy # pylint: disable=E0401
+from pyjuque.Strategies.BaseStrategy import Strategy # pylint: disable=E0401
 
 class EMACrossover(Strategy):
 
@@ -8,7 +8,10 @@ class EMACrossover(Strategy):
         self.chooseIndicators()
 
     def chooseIndicators(self):
-        self.indicators = dict(indicator_name  = 'sma', col_name = 'sma_fast', period = 5), dict(indicator_name = 'sma', col_name = 'sma_slow', period = 25)
+        self.indicators = [
+					dict(indicator_name  = 'sma', col_name = 'sma_fast', period = 5), 
+					dict(indicator_name = 'sma', col_name = 'sma_slow', period = 25)
+				]
 
     def checkLongSignal(self, i):
         df = self.df

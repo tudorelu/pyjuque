@@ -27,10 +27,10 @@ import pandas as pd
 import datetime as dt
 
 # Pyjuque Modules
-from bot.Exchanges.Binance import Binance # pylint: disable=E0401
-from bot.Strategies.EMAXStrategy import EMACrossover # pylint: disable=E0401
-from bot.Engine import backtest, OrderManagement, Order, Pair, Bot #, Base # pylint: disable=E0401
-from bot.Plotting.Plotter import PlotData # pylint: disable=E0401
+from pyjuque.Exchanges.Binance import Binance # pylint: disable=E0401
+from pyjuque.Strategies.EMAXStrategy import EMACrossover # pylint: disable=E0401
+from pyjuque.Engine import backtest, OldOrderManagement, Order, Pair, Bot #, Base # pylint: disable=E0401
+from pyjuque.Plotting.Plotter import PlotData # pylint: disable=E0401
 
 class OrderManagementTests(unittest.TestCase):
 	############################
@@ -139,7 +139,7 @@ class OrderManagementTests(unittest.TestCase):
 		self.bot = self.session.query(Bot).filter_by(name=self.bot_name).first()
 		self.strategy = EMACrossover(5, 30)
 
-		self.om  = OrderManagement(
+		self.om  = OldOrderManagement(
 								bot=self.bot, 
 								session=self.session, 
 								exchange=self.exchange, 
@@ -153,8 +153,8 @@ class OrderManagementTests(unittest.TestCase):
 	#### tests ####
 	###############
 
-	@patch('bot.Engine.OrderManagement.try_entry_order')
-	@patch('bot.Engine.OrderManagement.try_exit_order')
+	@patch('pyjuque.Engine.OldOrderManagement.try_entry_order')
+	@patch('pyjuque.Engine.OldOrderManagement.try_exit_order')
 	def test_execute_bot(self, mock_try_exit_order, mock_try_entry_order):
 		""" Test execute bot method in OrderManagement"""
 		
@@ -163,7 +163,7 @@ class OrderManagementTests(unittest.TestCase):
 		self.assertEqual(mock_try_entry_order.call_count, 2)
 		self.assertEqual(mock_try_exit_order.call_count, 1)
 
-	@patch('bot.Exchanges.Binance.Binance.getSymbolKlines')
+	@patch('pyjuque.Exchanges.Binance.Binance.getSymbolKlines')
 	def test_try_entry_order(self, mock_getSymbolKlines):
 		""" Test entry order method in OrderManagement. """
 
@@ -171,9 +171,9 @@ class OrderManagementTests(unittest.TestCase):
 		mock_getSymbolKlines.return_value = self.df_ADABTC_1k
 
 		# Case where false buy signal is returned by strategy.
-		with patch('bot.Strategies.EMAXStrategy.EMACrossover.setup') as mockSetupStrategy:
-			with patch('bot.Strategies.EMAXStrategy.EMACrossover.checkBuySignal', return_value = False):
-				with patch('bot.Engine.Models.Order') as mockOrder:
+		with patch('pyjuque.Strategies.EMAXStrategy.EMACrossover.setup') as mockSetupStrategy:
+			with patch('pyjuque.Strategies.EMAXStrategy.EMACrossover.checkBuySignal', return_value = False):
+				with patch('pyjuque.Engine.Models.Order') as mockOrder:
 					self.om.try_entry_order(pair)
 					self.assertEqual(mockSetupStrategy.call_count, 1)
 					self.assertEqual(mockOrder.call_count, 0)
@@ -190,8 +190,8 @@ class OrderManagementTests(unittest.TestCase):
 										)
 
 		# Case where true buy signal is returned when test_run.
-		with patch('bot.Strategies.EMAXStrategy.EMACrossover.setup') as mockSetupStrategy:
-			with patch('bot.Strategies.EMAXStrategy.EMACrossover.checkBuySignal', return_value = True):
+		with patch('pyjuque.Strategies.EMAXStrategy.EMACrossover.setup') as mockSetupStrategy:
+			with patch('pyjuque.Strategies.EMAXStrategy.EMACrossover.checkBuySignal', return_value = True):
 				om_mock_database.try_entry_order(pair)
 				self.assertEqual(mockSetupStrategy.call_count, 1)
 				self.assertEqual(mock_session.add.call_count, 1)		
@@ -205,7 +205,7 @@ class OrderManagementTests(unittest.TestCase):
 		mock_session = AlchemyMagicMock()
 
 		# create mock OrderManagement object with mock db session and real run.
-		om_mock_database = OrderManagement(
+		om_mock_database = OldOrderManagement(
 										session=mock_session, 
 										bot=self.bot_not_test, 
 										exchange=self.exchange, 
@@ -213,10 +213,10 @@ class OrderManagementTests(unittest.TestCase):
 										)
 
 		# Case where true buy signal is returned when not a test_run.										
-		with patch('bot.Strategies.EMAXStrategy.EMACrossover.setup') as mockSetupStrategy:
-			with patch('bot.Strategies.EMAXStrategy.EMACrossover.checkBuySignal', return_value = True):
-				with patch('bot.Exchanges.Binance.Binance.placeLimitOrder', return_value = 'success') as mock_place_limit_order:
-					with patch('bot.Exchanges.Binance.Binance.updateSQLOrderModel') as mock_updateSQLOrder:
+		with patch('pyjuque.Strategies.EMAXStrategy.EMACrossover.setup') as mockSetupStrategy:
+			with patch('pyjuque.Strategies.EMAXStrategy.EMACrossover.checkBuySignal', return_value = True):
+				with patch('pyjuque.Exchanges.Binance.Binance.placeLimitOrder', return_value = 'success') as mock_place_limit_order:
+					with patch('pyjuque.Exchanges.Binance.Binance.updateSQLOrderModel') as mock_updateSQLOrder:
 						om_mock_database.try_entry_order(pair)
 						self.assertEqual(mock_place_limit_order.call_count, 1)
 						self.assertEqual(mock_updateSQLOrder.call_count, 1)
@@ -226,7 +226,7 @@ class OrderManagementTests(unittest.TestCase):
 
 		# Create new mock db session
 		mock_session = AlchemyMagicMock()
-		om_mock_database = OrderManagement(
+		om_mock_database = OldOrderManagement(
 										session=mock_session, 
 										bot=self.bot_not_test, 
 										exchange=self.exchange, 
@@ -234,10 +234,10 @@ class OrderManagementTests(unittest.TestCase):
 										)
 
 		# Case where true buy signal but placeLimitOrder had an error.									
-		with patch('bot.Strategies.EMAXStrategy.EMACrossover.setup') as mockSetupStrategy:
-			with patch('bot.Strategies.EMAXStrategy.EMACrossover.checkBuySignal', return_value = True):
-				with patch('bot.Exchanges.Binance.Binance.placeLimitOrder', return_value = 'code') as mock_place_limit_order:
-					with patch('bot.Exchanges.Binance.Binance.updateSQLOrderModel') as mock_updateSQLOrder:
+		with patch('pyjuque.Strategies.EMAXStrategy.EMACrossover.setup') as mockSetupStrategy:
+			with patch('pyjuque.Strategies.EMAXStrategy.EMACrossover.checkBuySignal', return_value = True):
+				with patch('pyjuque.Exchanges.Binance.Binance.placeLimitOrder', return_value = 'code') as mock_place_limit_order:
+					with patch('pyjuque.Exchanges.Binance.Binance.updateSQLOrderModel') as mock_updateSQLOrder:
 						om_mock_database.try_entry_order(pair)
 						self.assertEqual(mock_place_limit_order.call_count, 1)
 						self.assertEqual(mock_updateSQLOrder.call_count, 0)

@@ -4,9 +4,9 @@ curr_path = os.path.abspath(__file__)
 root_path = os.path.abspath(
 	os.path.join(curr_path, os.path.pardir, os.path.pardir))
 sys.path.append(root_path)
-from bot.Indicators.SuperTrend import ST
-from bot.Exchanges.Binance import Binance
-from bot.Plotting.Plotter import PlotData
+from pyjuque.Indicators.SuperTrend import ST
+from pyjuque.Exchanges.Binance import Binance
+from pyjuque.Plotting.Plotter import PlotData
 
 def Main():
   	

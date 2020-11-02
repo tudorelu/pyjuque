@@ -5,11 +5,11 @@ root_path = os.path.abspath(
 	os.path.join(curr_path, os.path.pardir, os.path.pardir))
 sys.path.append(root_path)
 
-from bot.Strategies.SimpleOneStrategy import SimpleOneStrategy
-from bot.Strategies.SimpleTwoStrategy import SimpleTwoStrategy
-from bot.Strategies.OTTStrategy import OTTStrategy
-from bot.Exchanges.Binance import Binance
-from bot.Plotting.Plotter import PlotData
+from pyjuque.Strategies.SimpleOneStrategy import SimpleOneStrategy
+from pyjuque.Strategies.SimpleTwoStrategy import SimpleTwoStrategy
+from pyjuque.Strategies.OTTStrategy import OTTStrategy
+from pyjuque.Exchanges.Binance import Binance
+from pyjuque.Plotting.Plotter import PlotData
 
 def Main():
 	exchange = Binance()

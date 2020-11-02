@@ -4,8 +4,8 @@ curr_path = os.path.abspath(__file__)
 root_path = os.path.abspath(
 	os.path.join(curr_path, os.path.pardir, os.path.pardir))
 sys.path.append(root_path)
-from bot.Exchanges.Binance import Binance
-from bot.Plotting.Plotter import PlotData
+from pyjuque.Exchanges.Binance import Binance
+from pyjuque.Plotting.Plotter import PlotData
 
 import plotly.graph_objs as go
 
@@ -22,7 +22,7 @@ def horizontal_line(start_time, end_time, value, color=None):
 def Main():
 		exchange = Binance()
 		symbol = "LTCUSDT"
-		df = exchange.getSymbolKlines(symbol, "1h", 5000)
+		df = exchange.getSymbolKlines(symbol, "1h", 8000)
 
 		start_time = df['time'][0]
 		end_time = df['time'][len(df)-1]

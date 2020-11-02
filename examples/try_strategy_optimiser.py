@@ -6,13 +6,13 @@ root_path = os.path.abspath(
 sys.path.append(root_path)
 
 # Import all Created exchanges here
-from bot.Exchanges.Binance import Binance
+from pyjuque.Exchanges.Binance import Binance
 from pandas import DataFrame
 
-from bot.Strategies.BBRSIStrategy import BBRSIStrategy
-from bot.Engine.Backtester import backtest
-from bot.Utils import dotdict
-from bot.Strategies.StrategyOptimiser import StrategyOptimiser
+from pyjuque.Strategies.BBRSIStrategy import BBRSIStrategy
+from pyjuque.Engine.Backtester import backtest
+from pyjuque.Utils import dotdict
+from pyjuque.Strategies.StrategyOptimiser import StrategyOptimiser
 from pprint import pprint
 from decimal import Decimal
 

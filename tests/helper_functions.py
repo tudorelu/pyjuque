@@ -6,7 +6,7 @@ root_path = os.path.abspath(
 	os.path.join(curr_path, os.path.pardir, os.path.pardir))
 sys.path.append(root_path)
 
-from bot.Engine.Models import Base # pylint: disable=E0401
+from pyjuque.Engine.Models import Base # pylint: disable=E0401
 
 # DB Tools
 from sqlalchemy import create_engine

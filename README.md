@@ -1,38 +1,37 @@
-# PYJUQUE
-## Python Juju Quant Engine
-### *AKA Private Crypto Trading Bot - Don't give away your strategies! *
+## **Py**thon **Ju**ju **Qu**ant **E**ngine
+**PYJUQUE**   &nbsp; &nbsp;  *(pai-jook)*
 
-This project implements some basic functionality needed to engage in algorithmic trading of cryptocurrencies. It can be regarded as a starting point for more complex trading bots, which implements / will implement the following features:
+This project implements the basic functionality needed to engage in algorithmic trading of cryptocurrencies. It can be regarded as a starting point for more complex trading bots, which implements the following features:
 
 ### Structure
-Code is contained in `bot`. Tests are in `tests`.
-# Features
-## Plotting
-There is some basic functionality for plotting in `bot/Plotter.py`
+Code is contained in `pyjuque`. Tests are in `tests`.
+## Features
+### Plotting
+There is some basic functionality for plotting in `pyjuque/Plotter`
 
-## Exchanges
-At `bot/Exchanges`. 
+### Exchanges
+At `pyjuque/Exchanges`. 
 
-  - [Binance](/bot/Exchanges/Binance.py) - based on the official [REST API](https://github.com/binance-exchange/binance-official-api-docs/blob/master/rest-api.md)
+  - [Binance](/pyjuque/Exchanges/Binance.py) - based on the official [REST API](https://github.com/binance-exchange/binance-official-api-docs/blob/master/rest-api.md)
 
 contains some tests
 
 ### Backtesting
-At `bot/Engine/Backtester.py`. 
+At `pyjuque/Engine/Backtester`. 
 
 Backtester infrastructure currently supports 
   - stop loss, trailing stop loss &
   - subsequent entries logic (DCA)
 
 ### Indicators
-At `bot/Indicators.py`. 
+At `pyjuque/Indicators`. 
 
 Started implementing the Indicators module which currently contains some indicators from `pyti`;.
 
 The thinking is that this module should allow us to easily and quickly compute any of the hundreds of indicators out there and to use them in strategies & backtesting. Should seamlessly connect to the **Strategies** module.
 
 ### Strategies
-At `bot/Strategies`. 
+At `pyjuque/Strategies`. 
 
 A base module which allows us to define buying & selling strategies for crypto assets. Each strategy will contain the following phases: 
 `setup` (where the indicators are computed), 
@@ -40,21 +39,66 @@ A base module which allows us to define buying & selling strategies for crypto a
 `checkBuySignal`, `checkSellSignal`, 
 `getBuySignalsList` and `getSellSignalsList` (the last two to be used for backtesting). 
 
-Currently contains a few basic strategies. More strategies will be added together with a **build-your-own** strategy template. Should seamlessly connect to the **Backtesting** & **Order Management** modules.
+Currently contains a few basic strategies. More strategies will be added together with a **build-your-own** strategy template. Should seamlessly connect to the **Backtesting** & **Bot Controller** modules.
 
 
 ### Strategy Optimiser 
-At `bot/Strategies/StrategyOptimiser.py`. 
+At `pyjuque/Strategies/StrategyOptimiser.py`. 
 
 Currently allows for optimising strategy parameters using a genetic algorithm.
+
+
+### Local Order Book
+At `pyjuque/Engine/OrderBook.py`. 
+
+Creates and stores a local order book for the specified symbols. Order Book is updated every second through a websocket connection to the Exchange (currently Binance). 
+
+```py
+from pyjuque.Engine.OrderBook import OrderBook
+
+# Initialize & start OrderBook with desired symbols
+ob = OrderBook(symbols=['BTCUSDT', 'LTCUSDT'])
+ob.startOrderBook()
+...
+# Get Updated Order Book data at any point in your code 
+ordb = ob.getOrderBook()
+print(ordb)
+
+{
+  'BTCUSDT': {
+      'asks': [
+          ['13662.31000000', '3.24473100'],
+          ['13662.82000000', '0.06815300'],
+          ['13663.08000000', '0.00900000'],
+          ...
+          ['20000.00000000', '95.22325900']
+        ],
+      'bids': [
+          ['13662.30000000', '1.26362900'],
+          ['13661.78000000', '0.04395000'],
+          ['13661.62000000', '0.01439200'],
+          ...
+          ['10188.00000000', '1.11546400']
+        ],
+      'lastUpdateId': 6382686192  # ignore this
+  },
+  'LTCUSDT': {
+      'asks': [ ... ],
+      'bids': [ ... ],
+      'lastUpdateId': 1521585540  # ignore this
+  },
+ 'counter': 11                    # ignore this
+}
+
+```
 
 ### Tests
 Run them with the command `nose2`
 
 ## **In Progress**
 
-### Order Management
-At `bot/Engine/OrderManagement.py`. 
+### Bot Controller
+At `pyjuque/Engine/BotController.py`. 
 
 A module which will handle the buying and selling of assets, given simple or more advanced rules, allowing us to run a strategy indefinitely. 
 
@@ -70,7 +114,8 @@ A module which will handle the buying and selling of assets, given simple or mor
 - Multiple trade entries (in case trade goes against you)
 
 ### State persistence 
-The ability to save the current bot state for later use. We may use something like SQLAlchemy to easily port to multiple SQL based DBs, but also want to have an API for transforming data to JSON.
+
+Using SQLAlchemy.
 
 
 ## **Coming Soon**

@@ -1,4 +1,4 @@
-from bot.Indicators import AddIndicator # pylint: disable=E0401
+from pyjuque.Indicators import AddIndicator # pylint: disable=E0401
 from abc import ABC, abstractmethod
 
 class Strategy(ABC):

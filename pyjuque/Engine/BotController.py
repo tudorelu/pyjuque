@@ -6,8 +6,8 @@ from decimal import Decimal
 from uuid import uuid4
 import time
 import math
-from bot.Exchanges.Binance import Binance # pylint: disable=E0401
-from bot.Engine.Models import Bot, Pair, Order # pylint: disable=E0401
+from pyjuque.Exchanges.Binance import Binance # pylint: disable=E0401
+from pyjuque.Engine.Models import Bot, Pair, Order # pylint: disable=E0401
 
 class BotController:
 

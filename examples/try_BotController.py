@@ -5,16 +5,16 @@ root_path = os.path.abspath(
     os.path.join(curr_path, os.path.pardir, os.path.pardir))
 sys.path.append(root_path)
 
-from bot.Engine.Models import Base, Bot, Order, Pair, EntrySettings, ExitSettings
-from bot.Engine.BotController import BotController
+from pyjuque.Engine.Models import Base, Bot, Order, Pair, EntrySettings, ExitSettings
+from pyjuque.Engine.BotController import BotController
 from pprint import pprint
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from bot.Strategies.EMAXStrategy import EMACrossover
-from bot.Strategies.AlwaysBuyStrategy import AlwaysBuyStrategy
+from pyjuque.Strategies.EMAXStrategy import EMACrossover
+from pyjuque.Strategies.AlwaysBuyStrategy import AlwaysBuyStrategy
 
-from bot.Exchanges.Binance import Binance
+from pyjuque.Exchanges.Binance import Binance
 
 def get_session(path='sqlite:///'):
     some_engine = create_engine(path, echo=False)

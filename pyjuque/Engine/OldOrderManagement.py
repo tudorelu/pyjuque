@@ -1,14 +1,14 @@
 
-from bot.Exchanges.Binance import Binance
+from pyjuque.Exchanges.Binance import Binance
 from pandas import DataFrame
 
 from traceback import print_exc
 
 from decimal import Decimal
 from datetime import datetime
-from bot.Engine.Models import Bot, Pair, Order
+from pyjuque.Engine.Models import Bot, Pair, Order, ExitSettings
 
-class OrderManagement:
+class OldOrderManagement:
 
 	def __init__(self, session, bot, exchange, strategy):
 		self.bot = bot
@@ -119,6 +119,7 @@ class OrderManagement:
 			strategy = self.strategy
 			pair:Pair = bot.getPairWithSymbol(session, symbol)
 			order:Order = session.query(Order).get(order.id)
+			exit_settings = session.query(ExitSettings).get(bot.exit_settings_id)
 
 			print("Checking", order, "on", symbol)
 			if order.is_test:
@@ -140,7 +141,7 @@ class OrderManagement:
 				if order.is_entry:
 					# If this entry order has been filled, place the corresponding exit order
 
-					entry_price = Decimal(order.entry_price) * (Decimal(100) + bot.profit_target)/Decimal(100)
+					entry_price = Decimal(order.entry_price) * (Decimal(100) + exit_settings.profit_target)/Decimal(100)
 					stop_loss_price = Decimal(order.entry_price) * bot.stop_loss_target/Decimal(100)
 
 					print("Entry order, place exit order! on", symbol)

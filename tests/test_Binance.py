@@ -10,7 +10,7 @@ root_path = os.path.abspath(
 sys.path.insert(1, root_path)
 
 # Import all Created exchanges here
-from bot.Exchanges.Binance import Binance
+from pyjuque.Exchanges.Binance import Binance
 from tests.utils import timeit
 from pandas import DataFrame
 

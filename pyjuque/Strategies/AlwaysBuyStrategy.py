@@ -1,4 +1,4 @@
-from bot.Strategies.BaseStrategy import Strategy
+from pyjuque.Strategies.BaseStrategy import Strategy
 
 class AlwaysBuyStrategy(Strategy):
 	""" Always Buy Strategy:

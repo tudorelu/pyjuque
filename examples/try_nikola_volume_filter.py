@@ -5,9 +5,9 @@ root_path = os.path.abspath(
 	os.path.join(curr_path, os.path.pardir, os.path.pardir))
 sys.path.append(root_path)
 
-from bot.Exchanges.Binance import Binance
-from bot.Plotting.Plotter import PlotData
-from bot.Indicators import AddIndicator, HA
+from pyjuque.Exchanges.Binance import Binance
+from pyjuque.Plotting.Plotter import PlotData
+from pyjuque.Indicators import AddIndicator, HA
 
 import pandas as pd
 import plotly.graph_objs as go

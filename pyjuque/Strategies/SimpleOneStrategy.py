@@ -1,4 +1,4 @@
-from bot.Indicators import AddIndicator
+from pyjuque.Indicators import AddIndicator
 
 class SimpleOneStrategy:
 	"""

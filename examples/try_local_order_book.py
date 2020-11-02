@@ -7,10 +7,10 @@ root_path = os.path.abspath(
 sys.path.append(root_path)
 
 from pprint import pprint
-from bot.Engine.OrderBook import OrderBook
+from pyjuque.Engine.OrderBook import OrderBook
 
 if __name__ == '__main__':
-	ob = OrderBook(symbols=['BTCUSDT'])
+	ob = OrderBook(symbols=['BTCUSDT', 'LTCUSDT'])
 
 	ob.startOrderBook()
 	time.sleep(10)

@@ -6,12 +6,12 @@ root_path = os.path.abspath(
 sys.path.append(root_path)
 
 # Import all Created exchanges here
-from bot.Exchanges.Binance import Binance
+from pyjuque.Exchanges.Binance import Binance
 from pandas import DataFrame
 
-from bot.Strategies.EMAXStrategy import EMACrossover
-from bot.Engine.Backtester import backtest
-from bot.Plotting.Plotter import PlotData
+from pyjuque.Strategies.EMAXStrategy import EMACrossover
+from pyjuque.Engine.Backtester import backtest
+from pyjuque.Plotting.Plotter import PlotData
 
 from pprint import pprint
 

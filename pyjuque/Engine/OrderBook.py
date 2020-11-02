@@ -14,7 +14,7 @@ import threading
 from pprint import pprint
 from decimal import Decimal, Context
 
-from bot.Exchanges.Binance import Binance
+from pyjuque.Exchanges.Binance import Binance
 
 ############## GLOBAL VARIABLES ##############
 
