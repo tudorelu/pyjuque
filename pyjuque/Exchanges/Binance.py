@@ -17,6 +17,7 @@ from os.path import join, dirname
 
 from dotenv import load_dotenv, find_dotenv
 load_dotenv(find_dotenv())
+from datetime import datetime
 
 class InvalidCredentialsException(Exception):
     pass
@@ -41,8 +42,8 @@ class Binance():
     ORDER_STATUS_REJECTED = 'REJECTED'
     ORDER_STATUS_EXPIRED = 'EXPIRED'
 
-    SIDE_BUY = 'BUY'
-    SIDE_SELL = 'SELL'
+    ORDER_SIDE_BUY = 'BUY'
+    ORDER_SIDE_SELL = 'SELL'
 
     ORDER_TYPE_LIMIT = 'LIMIT'
     ORDER_TYPE_MARKET = 'MARKET'
@@ -177,7 +178,7 @@ class Binance():
             return []
         
         symbols_list = []
-        for pair in data['payload']:
+        for pair in data["payload"]:
             symbols_list.append(pair)
 
         return symbols_list
@@ -186,7 +187,7 @@ class Binance():
         symbols = self._getTickerData()
         self.TICKER_UPDATE_TIME = time.time()
         for symb in symbols:
-            Binance.TICKER_DATA[symb['symbol']] = symb
+            Binance.TICKER_DATA[symb["symbol"]] = symb
 
     def addCredentials(self, api_key, secret_key):
         """ Adds API & SECRET keys into the object's memory """
@@ -241,6 +242,78 @@ class Binance():
 
         return symbols_list
 
+    def _getPriceInBTCDirectly(self, asset:str):
+        """ Returns the price of an `asset` that is traded with BTC as quote or base asset. """
+        price_in_btc = None
+        getcontext().prec = 28
+        if asset == 'BTC':
+            price_in_btc = Decimal(1)
+
+        elif self.TICKER_DATA.__contains__(asset+"BTC"):
+            ticker_data = self.TICKER_DATA[asset+"BTC"]
+            ticker_price = Decimal(0.5) * \
+                (Decimal(ticker_data['askPrice']) + Decimal(ticker_data['bidPrice']))
+            price_in_btc = ticker_price
+            if ticker_price == 0:
+                price_in_btc = None
+            else:
+                price_in_btc = ticker_price
+
+        elif self.TICKER_DATA.__contains__("BTC"+asset):
+            ticker_data = self.TICKER_DATA["BTC"+asset]
+            ticker_price = Decimal(0.5) * \
+                (Decimal(ticker_data['askPrice']) + Decimal(ticker_data['bidPrice']))
+            if ticker_price == 0:
+                price_in_btc = None
+            else:
+                price_in_btc = Decimal(1) / ticker_price
+
+        return price_in_btc
+
+    def getPriceInBTC(self, asset:str):
+        """ Returns the price of an 'asset', uses triangulation to determine BTC price if needed."""
+        possible_pairs = dict()
+        price_in_btc = None
+        findBTCDirectly = False
+        getcontext().prec = 28
+        # loop through all pairs to see if asset is traded with BTC as quote or base asset
+        for key, value in self.SYMBOL_DATAS.items():
+            if asset in key:
+                possible_pairs[key] = dict(base=value['baseAsset'], quote=value['quoteAsset'])
+                if 'BTC' in key:
+                    findBTCDirectly = True
+
+        if findBTCDirectly:
+            # asset is traded with BTC as quote or base asset, find price directly.
+            price_in_btc = self._getPriceInBTCDirectly(asset)
+        elif not findBTCDirectly:
+            # asset is not traded with BTC as quote or base asset, use triangulation to find BTC price.
+            for pair, quote_base in possible_pairs.items():
+
+                ticker_data = self.TICKER_DATA[pair]
+                ticker_price = Decimal(0.5) * \
+                (Decimal(ticker_data['askPrice']) + Decimal(ticker_data['bidPrice']))
+
+                if asset == quote_base['base']:
+                    price_asset_in_new_asset = ticker_price
+                    new_asset = quote_base['quote']
+                if asset == quote_base['quote']:
+                    price_asset_in_new_asset = Decimal(1) / ticker_price
+                    new_asset = quote_base['base']
+
+                btc_price_new_asset = self._getPriceInBTCDirectly(new_asset)
+
+                if btc_price_new_asset is None:
+                    # new_asset does not have a quote or base asset in BTC
+                    continue
+                if btc_price_new_asset is not None:
+                    # new_asset does have a quote or base asset in BTC, we can now calculate BTC price!
+                    if price_asset_in_new_asset == 0:
+                        price_in_btc = None
+                    else:
+                        price_in_btc = price_asset_in_new_asset * btc_price_new_asset
+                        break
+        return price_in_btc
     def getOrderBook(self, symbol, limit=100):
         """ Gets Order Book data for symbol """
 
@@ -761,12 +834,20 @@ class Binance():
                 order.entry_price = order.price
             
         if not order.is_test:
-            order.timestamp = new_order_response['transactTime']
+            if new_order_response.__contains__('transactTime'):
+                order.timestamp = datetime.fromtimestamp(
+                    new_order_response['transactTime']/1000)
+            else:
+                order.timestamp = datetime.fromtimestamp(
+                    new_order_response['time']/1000)
+            
+            # pprint(new_order_response)
             order.price = new_order_response['price']
             order.original_quantity =  Decimal(new_order_response['origQty'])
             order.executed_quantity =  Decimal(new_order_response['executedQty'])
             order.status = new_order_response['status']
             order.side = new_order_response['side']
+            order.order_type = new_order_response['type']
             if order.side == 'BUY':
                 order.entry_price = new_order_response['price']
 

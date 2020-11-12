@@ -178,22 +178,31 @@ def insertBids(previous_bids, received_bids):
 class UpdateOrderBookThread(threading.Thread):
   """ Thread that connects to exchange through websocket and updates 
   local order book """
-  def __init__(self, name, socket_url):
+  def __init__(self, name, socket_url, onUpdate=None):
     threading.Thread.__init__(self)
     self.name = name
     self.socket_url = socket_url
+    self.onUpdate = onUpdate
 
   def run(self):
     print("Start Running")
     print(self.socket_url)
 
     # websocket.enableTrace(True)
+    msg = onMessage
+    if self.onUpdate != None:
+      def onMessageUpdated(ws, message):
+        onMessage(ws, message)
+        self.onUpdate()
+      msg = onMessageUpdated
+
     global ws
+
     ws = websocket.WebSocketApp(
       self.socket_url, 
       on_close=onClose, 
       on_error=onError,
-      on_message=onMessage)
+      on_message=msg)
     ws.on_open=onOpen
     ws.run_forever()
 
@@ -235,8 +244,9 @@ class CreateOrderBookThread(threading.Thread):
         buffered_events_count, symbol, len(buffered_events[symbol])))
 
 class OrderBook():
-  def __init__(self, symbols):
+  def __init__(self, symbols, onUpdate):
     self.symbols = symbols
+    self.onUpdate = onUpdate
     
 
   def startOrderBook(self):
@@ -254,7 +264,7 @@ class OrderBook():
       '/'.join(streams)
     
     update_order_book_thread = UpdateOrderBookThread(
-      "UpdateOrderBook", socket_url)
+      "UpdateOrderBook", socket_url, self.onUpdate)
     create_order_book_thread = CreateOrderBookThread(
       "CreateOrderBook", exchange, self.symbols)
     

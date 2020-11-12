@@ -4,9 +4,19 @@ from decimal import Decimal
 import sqlalchemy.types as types
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
-from sqlalchemy.orm import backref
+from sqlalchemy import create_engine
+from sqlalchemy.orm import backref, relationship, sessionmaker
 import math
+
+
 Base = declarative_base()
+
+def getSession(path='sqlite:///'):
+    some_engine = create_engine(path, echo=False)
+    Base.metadata.create_all(some_engine)
+    Session = sessionmaker(bind=some_engine)
+    session = Session()
+    return session
 
 class SqliteDecimal(types.TypeDecorator):
   # This TypeDecorator use Sqlalchemy Integer as impl. It converts Decimals

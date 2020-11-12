@@ -5,23 +5,14 @@ root_path = os.path.abspath(
     os.path.join(curr_path, os.path.pardir, os.path.pardir))
 sys.path.append(root_path)
 
-from pyjuque.Engine.Models import Base, Bot, Order, Pair, EntrySettings, ExitSettings
+from pyjuque.Engine.Models import Base, Bot, Order, Pair, EntrySettings, ExitSettings, getSession
 from pyjuque.Engine.BotController import BotController
 from pprint import pprint
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
 
 from pyjuque.Strategies.EMAXStrategy import EMACrossover
 from pyjuque.Strategies.AlwaysBuyStrategy import AlwaysBuyStrategy
 
 from pyjuque.Exchanges.Binance import Binance
-
-def get_session(path='sqlite:///'):
-    some_engine = create_engine(path, echo=False)
-    Base.metadata.create_all(some_engine)
-    Session = sessionmaker(bind=some_engine)
-    session = Session()
-    return session
 
 def initialize_database(session):
     """ Function that initializes the database
@@ -86,7 +77,7 @@ def clearOrdersFromDB(session):
 
 def Main():
     resetOrdersPairs = False
-    session = get_session('sqlite:///pyjuquetest1.db')
+    session = getSession('sqlite:///pyjuquetest1.db')
     # First time you run this, uncomment the next line
     # initialize_database(session)
     if resetOrdersPairs:
