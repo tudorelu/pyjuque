@@ -48,13 +48,13 @@ At `pyjuque/Strategies/StrategyOptimiser.py`.
 
 Currently allows for optimising strategy parameters using a genetic algorithm. Checkout this [example](/examples/try_strategy_optimiser.py).
 
-### Local Order Book
-At `pyjuque/Engine/OrderBook.py`. 
+### Local Order Book (for Binance)
+At `pyjuque/Exchanges/BinanceOrderBook.py`. 
 
 Creates and stores a local order book for the specified symbols. Order Book is updated every second through a websocket connection to the Exchange (currently Binance). Checkout this [example](/examples/try_local_order_book.py).
 
 ```py
-from pyjuque.Engine.OrderBook import OrderBook
+from pyjuque.Engine.BinanceOrderBook import OrderBook
 
 # Initialize & start OrderBook with desired symbols
 ob = OrderBook(symbols=['BTCUSDT', 'LTCUSDT'])

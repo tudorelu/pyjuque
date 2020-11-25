@@ -4,7 +4,7 @@ import hashlib
 import hmac
 import time
 import pandas
-from decimal import Context, Decimal
+from decimal import Context, Decimal, getcontext
 from traceback import print_exc
 import math
 
@@ -19,14 +19,10 @@ from dotenv import load_dotenv, find_dotenv
 load_dotenv(find_dotenv())
 from datetime import datetime
 
-class InvalidCredentialsException(Exception):
-    pass
-
-class InternalExchangeException(Exception):
-    pass
-
-class ExchangeConnectionException(Exception):
-    pass
+from pyjuque.Exchanges.Base.Exceptions import \
+    InvalidCredentialsException, \
+    InternalExchangeException, \
+    ExchangeConnectionException
 
 from pprint import pprint
 from enum import Enum
@@ -116,13 +112,17 @@ class Binance():
             else:
                 data = payload
                 data['url'] = url
+
+        except requests.exceptions.ConnectionError:
+            raise ExchangeConnectionException()
         except Exception as e:
             print("Exception occured when trying to GET from "+url)
             print_exc()
             data = {'code': '-1', 'url':url, 'msg': e}
+            # raise ExchangeConnectionException()
         return data
 
-    def _post(self, url, params=None, headers=None,):
+    def _post(self, url, params=None, headers=None):
         """ Implements a post request for this exchange """
         try: 
             response = requests.post(url, params=params, headers=headers)
@@ -314,6 +314,7 @@ class Binance():
                         price_in_btc = price_asset_in_new_asset * btc_price_new_asset
                         break
         return price_in_btc
+    
     def getOrderBook(self, symbol, limit=100):
         """ Gets Order Book data for symbol """
 
@@ -341,7 +342,7 @@ class Binance():
         # print("Initial order book looks like")
         # pprint(order_book)
         order_book_side = order_book['asks'] \
-            if side == Binance.SIDE_SELL else order_book['bids']
+            if side == Binance.ORDER_SIDE_SELL else order_book['bids']
 
         quantity = Decimal(quantity)
         i, orders, price = 0, [], Decimal(0)
@@ -365,7 +366,7 @@ class Binance():
                     order_book = self.getOrderBook(symbol=symbol, limit=order_book_limits[obl_index])
                     # print("Got new order book with limit", order_book_limits[obl_index])
                     order_book_side = order_book['asks'] \
-                        if side == Binance.SIDE_SELL else order_book['bids']
+                        if side == Binance.ORDER_SIDE_SELL else order_book['bids']
                     # print(i, len(order_book_side))
                     # print(qtdif)
                 else:
@@ -448,7 +449,10 @@ class Binance():
         url = Binance.BASE_URL + Binance.ENDPOINTS['klines'] + params
 
         # download data
-        data = requests.get(url)
+        try:
+            data = requests.get(url)
+        except requests.exceptions.ConnectionError:
+            raise ExchangeConnectionException()
         dictionary = json.loads(data.text)
 
         # put in dataframe and clean-up
@@ -485,9 +489,9 @@ class Binance():
         self._signRequest(params)
         
         if verbose:
-            print("Placing Order with params:")
+            print("\n\nPlacing Order with params:")
             pprint(params)
-        
+            print("\n")
         url = Binance.BASE_URL + Binance.ENDPOINTS['order']
         if test: 
             url = Binance.BASE_URL + Binance.ENDPOINTS['testOrder']

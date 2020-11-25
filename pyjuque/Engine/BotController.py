@@ -1,45 +1,59 @@
-import logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-from traceback import print_exc
 from decimal import Decimal
 from uuid import uuid4
 import time
 import math
-from pyjuque.Exchanges.Binance import Binance # pylint: disable=E0401
-from pyjuque.Engine.Models import Bot, Pair, Order # pylint: disable=E0401
+from pprint import pprint
+from pyjuque.Engine.Models import Bot, Pair, Order
+from pyjuque.Engine.OrderManager import placeNewOrder, simulateOrderInfo
+from pyjuque.Exchanges.Base.Exceptions import \
+    InvalidCredentialsException, \
+    InternalExchangeException, \
+    ExchangeConnectionException
+from traceback import print_exc
+import logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+import sys
 
 class BotController:
 
-    def __init__(self, session, bot, exchange, strategy):
+    def __init__(self, session, bot, exchange, strategy, sp = None, sp_on = False, logger_on = False):
         self.bot = bot
         self.session = session
         self.exchange = exchange
         self.strategy = strategy
         self.test_mode = bot.test_run
         self.kline_interval = '5m'
+        self.sp = sp
+        self.sp_on = sp_on
+        self.logger_on = logger_on
 
     def executeBot(self):
         """ The main execution loop of the bot """
 
         # Step 1: Retreive all pairs for a particular bot
-        logger.info("Getting active pairs:")
+
+        self.logOrSp("Getting active pairs:")
+
         active_pairs = self.bot.getActivePairs(self.session)
-        logger.info("Number of active_pairs: {}".format(
-            len(active_pairs)))
+        
+        self.logOrSp("Number of active_pairs: {}".format(
+                len(active_pairs)))
 
         # Step 2 For Each Pair:
         #		Retreive current market data
         # 	Compute Indicators & Check if Strategy is Fulfilled
         #		IF Fulfilled, palce order (Save order in DB)
-        logger.info("Checking signals on pairs...")
+        self.logOrSp("Checking signals on pairs...")
         for pair in active_pairs:
+            self.logOrSp("Checking signal on {}".format(pair.symbol))
             self.tryEntryOrder(pair)
 
         # Step 3: Retreive all open orders on the bot
-        logger.info("Getting open orders:")
+        self.logOrSp("Getting open orders:")
         open_orders = self.bot.getOpenOrders(self.session)
-        logger.info("Number of open orders: {}".format(len(open_orders)))
+        self.logOrSp("Number of open orders: {}".format(len(open_orders)))
+        
 
         # Step 4: For Each order that was already placed by the bot
         # and was not filled before, check status:
@@ -47,7 +61,7 @@ class BotController:
         #           -> If entry order, place exit order
         #           -> If exit order, success (take profit), 
         #           or failure (stop loss): Resume trading!
-        logger.info("Checking orders state...")
+        self.logOrSp("Checking orders state...")
         for order in open_orders:
             self.updateOpenOrder(order)
 
@@ -62,10 +76,15 @@ class BotController:
         strategy = self.strategy
 
         symbol = pair.symbol
-        logger.info("Checking signal on {}".format(symbol))
 
-        df = exchange.getSymbolKlines(
-            symbol, self.kline_interval, limit=strategy.minimum_period)
+        try:
+            df = exchange.getSymbolKlines(
+                symbol, self.kline_interval, limit=strategy.minimum_period)
+        except ExchangeConnectionException:
+            self.logOrSp('Error getting data from the exchange for {}:'.format(symbol), should_print=True)
+            self.logOrSp(sys.exc_info(), should_print=True)
+            return
+            
         strategy.setUp(df)
         i = len(df)-1
 
@@ -80,7 +99,7 @@ class BotController:
             if bot.entry_settings.signal_distance == 0:
                 desired_price = Decimal(df.iloc[-1]['close'])
                 quantity = quote_qty / desired_price
-                self.placeNewOrder(
+                self.placeOrder(
                     symbol=symbol, pair=pair, quantity=quantity, 
                     side=side, order_type=exchange.ORDER_TYPE_MARKET, is_entry=True)
             else:
@@ -88,7 +107,7 @@ class BotController:
                     * Decimal((100 - bot.entry_settings.signal_distance) / 100 )
                 quantity = quote_qty / desired_price
                 price = desired_price
-                self.placeNewOrder(
+                self.placeOrder(
                     symbol=symbol, pair=pair, price=price, quantity=quantity, 
                     side=side, order_type=exchange.ORDER_TYPE_LIMIT, is_entry=True)
 
@@ -102,11 +121,23 @@ class BotController:
 
         # get pair from database
         pair:Pair = self.bot.getPairWithSymbol(self.session, order.symbol)
+
+        self.logOrSp('Checking open order on {}.'.format(pair.symbol))
         # get info of order from exchange
-        if not self.test_mode:
-            exchange_order_info = exchange.getOrderInfo(order.symbol, order.id)
+        if not self.test_mode: 
+            try:
+                exchange_order_info = exchange.getOrder(order.symbol, order.id)
+            except ExchangeConnectionException:
+                self.logOrSp('Error getting data from the exchange for updating open order on {}.'.format(pair.symbol), should_print=True)
+                self.logOrSp(sys.exc_info(), should_print=True)
+                return
         else:
-            exchange_order_info = self.simulateOrderInfo(order)
+            try:
+                exchange_order_info = simulateOrderInfo(exchange, order, self.kline_interval)
+            except ExchangeConnectionException:
+                self.logOrSp('Error simulating open order on {}.'.format(pair.symbol), should_print=True)
+                self.logOrSp(sys.exc_info(), should_print=True)
+                return
         # check for valid response from exchange
         if not exchange.isValidResponse(exchange_order_info):
             logger.warning('Exchange order info could not be retrieved!, \
@@ -118,7 +149,7 @@ class BotController:
         order.status = exchange_order_info['status']
         order.executed_quantity = exchange_order_info['executedQty']
 
-        if (order.side == 'BUY'):
+        if (order.side == exchange.ORDER_SIDE_BUY):
              # Order has been canceled by the user
             if (order.status == exchange.ORDER_STATUS_CANCELED):
                 if order.executed_quantity > 0:
@@ -128,6 +159,8 @@ class BotController:
 
             # buy order was filled, place exit order.
             if (order.status == exchange.ORDER_STATUS_FILLED):
+                self.logOrSp('BUY order on {} filled, try exit.'.format(pair.symbol), should_print=True)
+
                 self.tryExitOrder(order, pair)
 
             # buy order has been accepted by engine
@@ -151,7 +184,7 @@ class BotController:
                     self.processClosedPosition(order, pair)
 
         # sell order 
-        if (order.side == 'SELL'):
+        if (order.side == exchange.ORDER_SIDE_SELL):
             # was cancelled by user.
             if (order.status == exchange.ORDER_STATUS_CANCELED):
                 # query buy order to again place a sell order for that buy order.
@@ -217,9 +250,13 @@ class BotController:
         exchange = self.exchange
         bot = self.bot
         strategy = self.strategy
-
-        candlestick_data = exchange.getSymbolKlines(
-            order.symbol, self.kline_interval, strategy.minimum_period)
+        try:
+            candlestick_data = exchange.getSymbolKlines(
+                order.symbol, self.kline_interval, strategy.minimum_period)
+        except ExchangeConnectionException:
+            self.logOrSp('Error getting data from the exchange for updating open sell order on {}:'.format(pair.symbol), should_print=True)
+            self.logOrSp(sys.exc_info(), should_print=True)
+            return
         current_price = candlestick_data.iloc[-1]['close']
         stop_loss_value = bot.exit_settings.stop_loss_value
 
@@ -227,7 +264,7 @@ class BotController:
             if ((Decimal(100) - Decimal(stop_loss_value)) / Decimal(100)) \
                 * Decimal(order.entry_price) >= Decimal(current_price):
                 quantity = self.computeQuantity(order)
-                side = 'SELL'
+                side = exchange.ORDER_SIDE_SELL
                 order_type = exchange.ORDER_TYPE_MARKET
 
                 if not self.test_mode:
@@ -242,14 +279,13 @@ class BotController:
                     order.status = order_result['status']
                     order.executed_quantity = order_result['executedQty']
 
-                    self.placeNewOrder(
-                                        symbol=order.symbol,
-                                        pair=pair,
-                                        order=order,
-                                        quantity=quantity,
-                                        order_type=order_type,
-                                        side=side
-                                        )
+                    self.placeOrder(
+                        symbol=order.symbol,
+                        pair=pair,
+                        order=order,
+                        quantity=quantity,
+                        order_type=order_type,
+                        side=side)
 
     def tryExitOrder(self, order, pair):
         """ If strategy returns exit signal look to place exit order. """
@@ -257,9 +293,14 @@ class BotController:
         symbol = order.symbol
         exchange = self.exchange
         strategy = self.strategy
-
-        candlestick_data = exchange.getSymbolKlines(\
-            symbol, self.kline_interval, strategy.minimum_period)
+        try:
+            candlestick_data = exchange.getSymbolKlines(\
+                symbol, self.kline_interval, strategy.minimum_period)
+        except ExchangeConnectionException:
+            self.logOrSp('Error getting data from the exchange for exiting order on {}:'.format(symbol), should_print=True)
+            self.logOrSp(sys.exc_info(), should_print=True)
+            return
+        
         if bot.exit_settings.exit_on_signal:
             strategy.setUp(candlestick_data)
             i = len(candlestick_data)-1
@@ -271,15 +312,14 @@ class BotController:
             if exit_signal:
                 quantity = self.computeQuantity(order)
                 order_type = exchange.ORDER_TYPE_MARKET
-                side = 'SELL'
-                self.placeNewOrder(
+                side = exchange.ORDER_SIDE_SELL
+                self.placeOrder(
                     symbol,
                     pair,
                     order=order,
                     quantity=quantity,
                     side=side,
-                    order_type=order_type
-                )
+                    order_type=order_type)
 
         else:
             # Calculates quantity of order. 
@@ -298,24 +338,23 @@ class BotController:
                 price = ((Decimal(100) + Decimal(profit_target)) \
                     / Decimal(100)) * Decimal(current_price)
                 order_type = exchange.ORDER_TYPE_LIMIT
-                side = 'SELL'
+                side = exchange.ORDER_SIDE_SELL
             elif stop_loss_value is not None:
                 price = ((Decimal(100) - Decimal(stop_loss_value)) \
                     / Decimal(100)) * Decimal(current_price)
                 order_type = exchange.ORDER_TYPE_STOP_LOSS
-                side = 'SELL'
+                side = exchange.ORDER_SIDE_SELL
             elif profit_target is not None:
                 price = ((Decimal(100) + Decimal(profit_target)) \
                     / Decimal(100)) * Decimal(current_price)
                 order_type = exchange.ORDER_TYPE_LIMIT
-                side = 'SELL'
+                side = exchange.ORDER_SIDE_SELL
 
-            self.placeNewOrder(
+            self.placeOrder(
                 symbol=symbol, pair=pair, 
                 order=order, price=price, 
                 quantity=quantity, side=side, 
-                order_type=order_type
-                )
+                order_type=order_type)
 
     def processClosedPosition(self, order, pair):
         """ Update status of closed position """
@@ -323,78 +362,19 @@ class BotController:
         pair.active = True
         pair.current_order_id = None
 
-    def placeNewOrder(self, symbol, pair, order = None, **order_params):
+    def placeOrder(self, symbol, pair, order=None, **order_params):
         """ Create Order model and place order to exchange. """
-        new_order_model = self.createOrderModel(symbol, order_params, order)
-
-        if not self.test_mode:
-            new_order_response = self.placeOrderFromOrderModel(new_order_model)
-        else:
-            new_order_response = dict(message='success')
-
-        if self.exchange.isValidResponse(new_order_response):
-            self.exchange.updateSQLOrderModel(
-                new_order_model, new_order_response, self.bot)
+        order_params['bot_id'] = self.bot.id
+        # print("Order params is")
+        # pprint(order_params)
+        new_order_model = placeNewOrder(
+            self.exchange, symbol, pair, order, self.bot.test_run, order_params)
+        
+        if new_order_model != None:
             self.syncModels(pair, order, new_order_model)
             self.session.add(new_order_model)
-            logger.info('{} Order was placed succesfully'.format(
-                new_order_model.side))
-
-    def createOrderModel(self, symbol, order_params, order):
-        """ Create Order Model and fill only mandatory params. 
-        Other params are filled after order is filled. """
-        if 'price' not in order_params:
-            order_params['price'] = None
-        if 'take_profit_price' not in order_params:
-            order_params['take_profit_price'] = None
-        if 'stop_price' not in order_params:
-            order_params['stop_price'] = None
-        if 'is_entry' not in order_params:
-            order_params['is_entry'] = False
-        if order is None:
-            position_id = str(uuid4())
-            entry_price = None
-        elif order is not None:
-            position_id = order.position_id
-            entry_price = order.entry_price
-
-        new_order_model = Order(
-                        id = str(uuid4()),
-                        position_id = position_id,
-                        bot_id = self.bot.id,
-                        symbol = symbol,
-                        price = order_params['price'],
-                        take_profit_price = order_params['take_profit_price'],
-                        order_type = order_params['order_type'],
-                        stop_price = order_params['stop_price'],
-                        original_quantity = order_params['quantity'],
-                        side = order_params['side'],
-                        is_entry =  order_params['is_entry'],
-                        is_test = self.test_mode,
-                        entry_price = entry_price,
-                        last_checked_time = int(round(time.time() * 1000))
-                        )
-        return new_order_model
-
-    def placeOrderFromOrderModel(self, order_model):
-        """ Places orders from db model to exchange."""
-        exchange = self.exchange
-        if order_model.order_type == exchange.ORDER_TYPE_LIMIT:
-            order_response = exchange.placeLimitOrder(
-                order_model.symbol, order_model.price, 
-                order_model.side, order_model.original_quantity, 
-                order_model.is_test, custom_id=order_model.id)
-        if order_model.order_type == exchange.ORDER_TYPE_MARKET:
-            order_response = exchange.placeMarketOrder(
-                order_model.symbol, order_model.side, 
-                order_model.original_quantity, order_model.is_test, 
-                custom_id=order_model.id)
-        if order_model.order_type == exchange.ORDER_TYPE_STOP_LOSS:
-            order_response = exchange.placeStopLossMarketOrder(
-                order_model.symbol, order_model.price, 
-                order_model.side, order_model.original_quantity, 
-                order_model.is_test, custom_id=order_model.id)
-        return order_response
+            self.logOrSp('{} Order was placed succesfully on {}'.format(
+                    new_order_model.side, symbol), should_print=True)
 
     def syncModels(self, pair, order, new_order_model):
         """ Sync pairs and orders to new status """
@@ -415,70 +395,20 @@ class BotController:
     def computeQuantity(self, order):
         """ Compute exit quantity so that also partially 
         filled orders can be handled."""
-        if order.side == 'BUY':
+        if order.side == self.exchange.ORDER_SIDE_BUY:
             exit_quantity = order.executed_quantity
-        elif order.side == 'SELL':
+        elif order.side == self.exchange.ORDER_SIDE_SELL:
             exit_quantity = Decimal(order.original_quantity) \
                 - Decimal(order.executed_quantity)
         return exit_quantity
 
-    def simulateOrderInfo(self, order):
-        """ Used when BotController is in test mode. 
-        Simulates order info returned by exchange."""
-        order_status = dict()
-        new_last_checked_time = int(round(time.time() * 1000)) # time in ms
-        time_diff = new_last_checked_time - order.last_checked_time
-        interval_in_ms = self.klineIntervalToMs(self.kline_interval)
-        if  time_diff < interval_in_ms:
-            candlestick_data = self.exchange.getSymbolKlines(
-                order.symbol, self.kline_interval, 1)
-        else:
-            minimum_period = int(math.ceil(time_diff / interval_in_ms))
-            candlestick_data = self.exchange.getSymbolKlines(
-                order.symbol, self.kline_interval, 
-                minimum_period, start_time=order.last_checked_time)
-
-        for _, candle in candlestick_data.iterrows():
-            lowest_price = candle['low']
-            if order.order_type == self.exchange.ORDER_TYPE_LIMIT:
-                if lowest_price <= order.price:
-                    order_status['status'] = self.exchange.ORDER_STATUS_FILLED
-                    order_status['side'] = order.side
-                    order_status['executedQty'] = order.original_quantity
-                    break
-            elif order.order_type == self.exchange.ORDER_TYPE_MARKET:
-                # not sure what to set this value to. 
-                # For now average of open and close of candle.
-                order.price = (candle['open'] + candle['close'])/2
-                order_status['status'] = self.exchange.ORDER_STATUS_FILLED
-                order_status['side'] = order.side
-                order_status['executedQty'] = order.original_quantity
-                break
-            elif order.order_type == self.exchange.ORDER_TYPE_STOP_LOSS:
-                if lowest_price >= order.price:
-                    order_status['status'] = self.exchange.ORDER_STATUS_FILLED
-                    order_status['side'] = order.side
-                    order_status['executedQty'] = order.original_quantity
-                    break
-        if not order_status:
-            order_status['status'] = self.exchange.ORDER_STATUS_NEW
-            order_status['side'] = order.side
-            order_status['executedQty'] = 0
-
-        order.last_checked_time = new_last_checked_time
-        return order_status
-
-    def klineIntervalToMs(self, kline_interval:str):
-        number = int(kline_interval[:-1])
-        unit = kline_interval[-1]
-        if unit == 'm':
-            multiply_by = 1000 * 60
-        if unit =='h':
-            multiply_by = 1000 * 60 * 60
-        if unit == 'd':
-            multiply_by = 1000 * 60 * 60 * 24
-        if unit == 'w':
-            multiply_by = 1000 * 60 * 60 * 24 * 7
-        if unit == 'M':
-            multiply_by = 1000 * 60 * 60 * 24 * 31 # bit too long does not matter.
-        return number * multiply_by
+    def logOrSp(self, message, should_print=False, force=False):
+        if self.sp_on and self.sp != None:
+            self.sp.stop()
+            if should_print:
+              logger.info(message)
+            else:
+                self.sp.text = message
+            self.sp.start()
+        elif self.logger_on or force:
+            logger.info(message)

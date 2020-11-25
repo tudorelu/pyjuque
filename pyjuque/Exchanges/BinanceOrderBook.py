@@ -71,34 +71,6 @@ def onMessage(ws, message):
       order_book[symbol]['asks'] = new_asks
       order_book[symbol]['bids'] = new_bids
 
-def getOrderBookPrice(exchange, symbol, side, quantity, order_book=None):
-  """ Calculates the average price we would pay / receive per unit of `symbol` 
-  if we wanted to trade `quantity` of that `symbol`, based on its order book"""
-  # TODO test it
-  # print("obap1")
-  order_book_side = order_book['asks'] \
-    if side == exchange.SIDE_SELL else order_book['bids']
-
-  quantity = Decimal(quantity)
-  i, orders, price = 0, [], Decimal(0)
-  accounted_for_quantity = Decimal(0)
-  qtdif = Decimal(1)
-  # print("obap2")
-  while accounted_for_quantity < quantity or qtdif > Decimal(0.0001):
-    try:
-      order = order_book_side[i]
-    except IndexError:
-      raise Exception("There are not enough orders in the Order Book.")
-      # return False
-    qty = min(Decimal(order[1]), quantity - accounted_for_quantity)
-    price += Decimal(order[0]) * qty
-    accounted_for_quantity += qty
-    qtdif = abs(Decimal(1) - accounted_for_quantity / quantity)
-    i += 1
-
-  # print("obap3")
-  return price / quantity
-
 def insertAsks(previous_asks, received_asks):
   """ Inserts multiple new asks in the order book (assumes 
   that the order book AND the new_asks list are sorted)"""
@@ -193,7 +165,14 @@ class UpdateOrderBookThread(threading.Thread):
     if self.onUpdate != None:
       def onMessageUpdated(ws, message):
         onMessage(ws, message)
-        self.onUpdate()
+        symbol = None
+        try:
+          json_message = json.loads(message)
+          symbol = json_message['data']['s']
+        except:
+          print("Exception getting symbol from ws message.")
+          pass
+        self.onUpdate(symbol)
       msg = onMessageUpdated
 
     global ws
@@ -244,10 +223,11 @@ class CreateOrderBookThread(threading.Thread):
         buffered_events_count, symbol, len(buffered_events[symbol])))
 
 class OrderBook():
-  def __init__(self, symbols, onUpdate):
+  def __init__(self, symbols, onUpdate, msUpdate=False):
+
     self.symbols = symbols
     self.onUpdate = onUpdate
-    
+    self.msUpdate = msUpdate
 
   def startOrderBook(self):
     global buffered_events, order_book_initialized, exchange
@@ -259,7 +239,12 @@ class OrderBook():
       buffered_events[symbol] = []
       order_book_initialized[symbol] = False
 
-    streams = [ symbol.lower()+"@depth" for symbol in self.symbols ]
+    streams = []
+    if self.msUpdate:
+      streams = [ symbol.lower()+"@depth@100ms" for symbol in self.symbols ]
+    else:
+      streams = [ symbol.lower()+"@depth" for symbol in self.symbols ]
+    
     socket_url = "wss://stream.binance.com:9443/stream?streams=" + \
       '/'.join(streams)
     
@@ -284,3 +269,37 @@ class OrderBook():
   def stopOrderBook(self):
     global ws
     ws.close()
+
+  def getOrderBookPrice(self, exchange, symbol, side, quantity, is_quote_quantity):
+    """ Calculates the average price we would pay / receive per unit of `symbol` 
+    if we wanted to trade `quantity` of that `symbol`, based on its order book"""
+    global order_book
+    initial_quantity = quantity
+    symbol_order_book = order_book[symbol]
+    order_book_side = symbol_order_book['asks'] \
+      if side == exchange.ORDER_SIDE_BUY else symbol_order_book['bids']
+
+    i, orders, price = 0, [], Decimal('0')
+    accounted_for_quantity = Decimal('0')
+
+    qtdif = Decimal('1')
+    while qtdif > Decimal('0'):
+      try:
+        order = order_book_side[i]
+      except IndexError:
+        raise Exception("There are not enough orders in the Order Book.")
+      if is_quote_quantity:
+        qty = min(order[1] * order[0], quantity - accounted_for_quantity)
+      else:
+        qty = min(order[1], quantity - accounted_for_quantity)
+      
+      price += (order[0] * qty)
+      accounted_for_quantity += Decimal(qty)
+      qtdif = abs(quantity - accounted_for_quantity)
+      i += 1
+
+
+    #   print("Step {}, qty {}, qtdiff {}, price_point {}, price {}".format(i, qty, qtdif, order[0], price))
+
+    # print("Price {}, qty {}".format(price, quantity))
+    return price / quantity

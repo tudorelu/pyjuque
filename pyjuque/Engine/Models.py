@@ -2,14 +2,22 @@ import sqlalchemy as db
 from datetime import datetime
 from decimal import Decimal
 import sqlalchemy.types as types
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import relationship
 from sqlalchemy import create_engine
 from sqlalchemy.orm import backref, relationship, sessionmaker
+from sqlalchemy.orm import scoped_session
+from sqlalchemy.orm import relationship
+from sqlalchemy.ext.declarative import declarative_base
+
 import math
 
-
 Base = declarative_base()
+
+def getScopedSession(path='sqlite:///'):
+    some_engine = create_engine(path, echo=False)
+    Base.metadata.create_all(some_engine)
+    session_factory = sessionmaker(bind=some_engine)
+    Session = scoped_session(session_factory)
+    return Session
 
 def getSession(path='sqlite:///'):
     some_engine = create_engine(path, echo=False)

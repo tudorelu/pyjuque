@@ -49,7 +49,7 @@ class TestOrder(unittest.TestCase):
         self.assertEqual(order_table.timestamp, None)
         self.assertEqual(order_table.entry_price, None)
         self.assertEqual(order_table.take_profit_price, None)
-        self.assertEqual(order_table.stop_loss_price, None)
+        self.assertEqual(order_table.stop_price, None)
         self.assertEqual(order_table.original_quantity, None)
         self.assertEqual(order_table.executed_quantity, None)
         self.assertEqual(order_table.status, None)
@@ -88,10 +88,10 @@ class TestCreateBot(unittest.TestCase):
         self.assertEqual(bot_table.quote_asset, None)
         self.assertEqual(bot_table.starting_balance, None)
         self.assertEqual(bot_table.current_balance, None)
-        self.assertEqual(bot_table.trade_allocation, None)
+        # self.assertEqual(bot_table.trade_allocation, None)
         self.assertEqual(bot_table.profit_loss, None)
-        self.assertEqual(bot_table.profit_target, None)
-        self.assertEqual(bot_table.stop_loss_target, None)
+        # self.assertEqual(bot_table.profit_target, None)
+        # self.assertEqual(bot_table.stop_loss_target, None)
 
     def test_create_btc_bot(self):
         """ tests storing and querying a bot that trades with btc as quote asset. """
@@ -104,7 +104,7 @@ class TestCreateBot(unittest.TestCase):
                     quote_asset = 'BTC',
                     starting_balance = 1,
                     current_balance = 1,
-                    profit_target = 2,
+                    # profit_target = 2,
                     test_run=True
                     )
 
@@ -117,7 +117,7 @@ class TestCreateBot(unittest.TestCase):
         self.assertEqual(adabot.quote_asset, 'BTC')
         self.assertEqual(adabot.starting_balance, 1)
         self.assertEqual(adabot.current_balance, 1)
-        self.assertEqual(adabot.profit_target, 2)
+        # self.assertEqual(adabot.profit_target, 2)
         self.assertEqual(adabot.profit_loss, 100)  
 
 
@@ -165,7 +165,7 @@ class TestBot(unittest.TestCase):
                     quote_asset=self.quote_asset,
                     starting_balance=self.starting_balance,
                     current_balance=self.current_balance,
-                    profit_target=self.profit_target,
+                    # profit_target=self.profit_target,
                     test_run=self.test_run,
                     )
 
@@ -252,12 +252,12 @@ class TestBot(unittest.TestCase):
             if order.symbol == self.symbol_eth:
                 eth_btc_order = order
         
-        self.assertEqual(eth_btc_order.id,self.order_id)
+        self.assertEqual(eth_btc_order.id, str(self.order_id))
         self.assertEqual(eth_btc_order.bot_id,self.bot_id)
         self.assertEqual(eth_btc_order.symbol,self.symbol_eth)
         self.assertEqual(eth_btc_order.entry_price,self.entry_price)
         self.assertEqual(eth_btc_order.take_profit_price,None)
-        self.assertEqual(eth_btc_order.stop_loss_price,None)
+        self.assertEqual(eth_btc_order.stop_price,None)
         self.assertEqual(eth_btc_order.original_quantity,self.original_quantity)
         self.assertEqual(eth_btc_order.executed_quantity,self.executed_quantity)
         self.assertEqual(eth_btc_order.status,self.status)

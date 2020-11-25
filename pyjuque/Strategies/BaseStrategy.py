@@ -2,6 +2,7 @@ import pandas as pd
 from pyjuque.Indicators import AddIndicator
 from abc import ABC, abstractmethod
 from pprint import pprint
+
 class Strategy(ABC):
     def __init__(self):
         self.df = None
@@ -14,7 +15,10 @@ class Strategy(ABC):
             for indicator in self.indicators:
                 exclude_keys = set(['indicator_name', 'col_name', 'indicator_function'])
                 args = [indicator[k] 
-                    for k in set(list(indicator.keys())) - exclude_keys]
+                    for k in indicator.keys() if k not in exclude_keys]
+                
+                # print("For {} we have args {}".format(indicator["indicator_name"], args))
+
                 if 'indicator_function' in indicator.keys():
                     col_name = indicator['col_name']
                     indicator_function = indicator['indicator_function']
@@ -34,6 +38,7 @@ class Strategy(ABC):
                     AddIndicator(
                         self.df, indicator['indicator_name'], 
                         indicator['col_name'], *args)
+        return self.df
 
     @abstractmethod
     def chooseIndicators(self):
