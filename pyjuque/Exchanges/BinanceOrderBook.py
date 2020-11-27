@@ -43,7 +43,7 @@ def onError(ws, error):
 
 def onMessage(ws, message):
   json_message = json.loads(message)
-  # pprint(json_message) 
+#   pprint(json_message) 
   symbol = json_message['data']['s']
   global order_book_initialized
   if not order_book_initialized[symbol]:
@@ -223,7 +223,7 @@ class CreateOrderBookThread(threading.Thread):
         buffered_events_count, symbol, len(buffered_events[symbol])))
 
 class OrderBook():
-  def __init__(self, symbols, onUpdate, msUpdate=False):
+  def __init__(self, symbols, onUpdate=None, msUpdate=False):
 
     self.symbols = symbols
     self.onUpdate = onUpdate
@@ -269,6 +269,49 @@ class OrderBook():
   def stopOrderBook(self):
     global ws
     ws.close()
+
+  def subscribeToSymbol(self, symbol):
+
+    global ws, exchange, order_book_initialized, buffered_events
+
+    speed = "100ms" if self.msUpdate else ""
+    
+    msg = {
+        "method": "SUBSCRIBE",
+        "params":
+        [
+            "{}@depth{}".format(symbol.lower(), speed)
+        ],
+        "id": 1
+    }
+
+    ws.send(json.dumps(msg))
+
+    buffered_events[symbol] = []
+    order_book_initialized[symbol] = False
+
+    create_order_book_thread = CreateOrderBookThread(
+      "CreateOrderBook_{}".format(symbol), exchange, [symbol])
+    
+    create_order_book_thread.start()
+
+  def unsubscribeFromSymbol(self, symbol):
+    global ws
+
+    symbol = symbol.lower()
+    speed = "100ms" if self.msUpdate else ""
+    
+    msg = {
+        "method": "UNSUBSCRIBE",
+        "params":
+        [
+            "{}@depth{}".format(symbol, speed)
+        ],
+        "id": 2
+    }
+
+    ws.send(json.dumps(msg))
+
 
   def getOrderBookPrice(self, exchange, symbol, side, quantity, is_quote_quantity):
     """ Calculates the average price we would pay / receive per unit of `symbol` 
