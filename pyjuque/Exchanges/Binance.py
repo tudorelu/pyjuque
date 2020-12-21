@@ -765,7 +765,7 @@ class Binance():
     @classmethod
     def _round_down_decimals(cls, number, decimals):
         factor = 10 ** decimals
-        return math.floor(number * factor)/factor
+        return math.floor(Decimal(number) * Decimal(factor)) / Decimal(factor)
 
     def toValidPrice(self, symbol, desired_price, round_up:bool=False) \
         -> Decimal():
