@@ -126,7 +126,7 @@ class BotController:
         # get info of order from exchange
         if not self.test_mode: 
             try:
-                exchange_order_info = exchange.getOrder(order.symbol, order.id)
+                exchange_order_info = exchange.getOrder(order.symbol, order.id, is_custom_id=True)
             except ExchangeConnectionException:
                 self.logOrSp('Error getting data from the exchange for updating open order on {}.'.format(pair.symbol), should_print=True)
                 self.logOrSp(sys.exc_info(), should_print=True)

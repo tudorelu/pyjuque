@@ -25,11 +25,11 @@ def initialize_database(session, symbols=[]):
     """ Function that initializes the database
     by creating a bot with two pairs. """
     myobject = Bot(
-        name="test_bot_2",
+        name="test_bot_tudor",
         quote_asset = 'BTC',
-        starting_balance = 0.1,
-        current_balance = 0.1,
-        test_run=True
+        starting_balance = 0.001,
+        current_balance = 0.001,
+        test_run=False
     )
 
     session.add(myobject)
@@ -37,13 +37,14 @@ def initialize_database(session, symbols=[]):
     entrysets = EntrySettings(
         id = 1,
         name ='TimStoploss',
-        initial_entry_allocation = 0.01,
-        signal_distance = 0.2,  # in %
+        initial_entry_allocation = 30,
+        signal_distance = 1,  # in %
         )
+    
     exitsets = ExitSettings(
         id=1,
         name='TimLoss',
-        profit_target = 1,      # in %
+        profit_target = 3,      # in %
         stop_loss_value = 10,   # in %
         exit_on_signal=False
         )
@@ -59,47 +60,26 @@ def initialize_database(session, symbols=[]):
         session.add(pair)
     session.commit()
 
-def clearOrdersFromDB(session):
-    session.query(Order).delete()
-    session.query(Pair).delete()
-    session.commit()
-    pair = Pair(
-        bot_id = 1,
-        symbol = "NEOBTC",
-        current_order_id = None
-    )
-    pair_2 = Pair(
-        bot_id = 1,
-        symbol = "BNBBTC",
-        current_order_id = None
-    )
-    session.add(pair)
-    session.add(pair_2)
-    session.commit()
-
 def Main():
     resetOrdersPairs = False
-    session = getSession('sqlite:///pyjuque_test_3.db')
+    session = getSession('sqlite:///pyjuque_live_5.db')
 
-    exchange = Binance()
+    exchange = Binance(get_credentials_from_env=True)
 
-    symbols = []
-    for symbol in exchange.SYMBOL_DATAS.keys():
-        if exchange.SYMBOL_DATAS[symbol]["status"] == "TRADING" \
-            and exchange.SYMBOL_DATAS[symbol]["quoteAsset"] == "BTC":
-            symbols.append(symbol)
+    symbols = ['ETHBTC', 'YFIBTC', 'UNIBTC']
+    # for symbol in exchange.SYMBOL_DATAS.keys():
+    #     if exchange.SYMBOL_DATAS[symbol]["status"] == "TRADING" \
+    #         and exchange.SYMBOL_DATAS[symbol]["quoteAsset"] == "BTC":
+    #         symbols.append(symbol)
 
     # First time you run this, uncomment the next line
     # initialize_database(session, symbols)
 
-    if resetOrdersPairs:
-        clearOrdersFromDB(session)
-
-    bot = session.query(Bot).filter_by(name='test_bot_2').first()
+    bot = session.query(Bot).filter_by(name='test_bot_tudor').first()
     # input your path to credentials here.
 
-    # strategy = AlwaysBuyStrategy()
-    strategy = BBRSIStrategy(13, 40, 70, 30)
+    strategy = AlwaysBuyStrategy()
+    # strategy = BBRSIStrategy(13, 40, 70, 30)
     bot_controller = BotController(session, bot, exchange, strategy)
 
     sp = yaspin()
@@ -112,8 +92,11 @@ def Main():
         except KeyboardInterrupt:
             return
         bot_controller.sp.start()
-        bot_controller.sp.text = "Waiting for {} seconds...".format(time_to_sleep)
-        time.sleep(time_to_sleep)
+        left_to_sleep = time_to_sleep
+        while left_to_sleep > 0:
+            bot_controller.sp.text = "Waiting for {} more seconds...".format(left_to_sleep)
+            time.sleep(1)
+            left_to_sleep -= 1
 
 if __name__ == '__main__':
         Main()

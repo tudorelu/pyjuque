@@ -700,7 +700,7 @@ class Binance():
         url = Binance.BASE_URL + Binance.ENDPOINTS['order']
         return self._delete(url, params, self.headers)
 
-    def getOrder(self, symbol, order_id, is_custom_id=False):
+    def getOrder(self, symbol, order_id, is_custom_id=True):
         """ Gets order info given order id """
         params = {
             'symbol': symbol.upper(),

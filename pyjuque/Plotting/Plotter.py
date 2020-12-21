@@ -4,6 +4,7 @@ import json
 import os
 import plotly.graph_objs as go
 from plotly.offline import plot
+import random
 
 """
     This file contains all the tools used for plotting data.
@@ -23,12 +24,49 @@ def GetPlotData(df,
     buy_signals:bool or list=False,
     sell_signals:bool or list=False,
     signals:bool or list=False,
+    regimes_number=None,
     plot_indicators=[],
     trend_points=False,
     trends=False):
     """ Generates the plotly traces to be plotted. """
 
     data=[]
+
+    if regimes_number != None:
+        if df.__contains__('regime'):
+            r_colors = []
+            for i in range(regimes_number):
+                r, g, b = random.randint(0, 255), random.randint(0, 255), random.randint(0, 255)
+                rand_str = 'rgba({}, {}, {}, 110)'.format(r, g, b)
+                r_colors.append(rand_str)
+                print('Color string for regime {} is {}'.format(i, rand_str))
+
+            last_regime = None
+            for i, row in df.iterrows():
+                if last_regime == None:
+                    last_regime = row['regime']
+                    regime_start = row
+                    continue
+
+                current_regime = row['regime']
+                if current_regime == last_regime:
+                    continue
+                else:
+                    regime_end = row
+                    data.append(
+                        go.Scatter(
+                            x=[regime_start['time'],regime_end['time']],
+                            y=[30000, 30000],
+                            line = dict(
+                                color = (r_colors[regime_start['regime']])
+                            ),
+                            showlegend=False,
+                            name = 'Regime {}'.format(regime_start['regime']),
+                            fill='tozeroy'))
+
+                    regime_start = regime_end
+
+
     if add_volume:
         volume = go.Bar(
             x = df['time'],	
@@ -38,7 +76,7 @@ def GetPlotData(df,
             width = 400000,
             name = "Volume")
 
-        data = [volume]
+        data.append(volume)
 
     if add_candles:
         candle = go.Candlestick(
@@ -173,6 +211,7 @@ def PlotData(df,
     trend_points=False,
     plot_indicators=[],
     plot_shapes=False,
+    regimes_number=None,
     trends=False,
     save_plot=False,
     show_plot=False,
@@ -198,6 +237,7 @@ def PlotData(df,
         buy_signals=buy_signals,
         sell_signals=sell_signals,
         signals=signals,
+        regimes_number=regimes_number,
         trend_points=trend_points,
         plot_indicators=plot_indicators,
         trends=trends)
@@ -230,7 +270,7 @@ def PlotData(df,
                 y2 = True
             if ind['yaxis'] == 'y3':
                 y3 = True
-        
+
     if y2 and y3:
         layout.update(
             yaxis={
