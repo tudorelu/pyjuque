@@ -62,7 +62,7 @@ def initialize_database(session, symbols=[]):
 
 def Main():
     resetOrdersPairs = False
-    session = getSession('sqlite:///' + db_name)
+    session = getSession('sqlite:///db/' + db_name)
     exchange = Binance(get_credentials_from_env=True)
     
     # Add all symbols on exchange
@@ -70,7 +70,6 @@ def Main():
     #     if exchange.SYMBOL_DATAS[symbol]["status"] == "TRADING" \
     #         and exchange.SYMBOL_DATAS[symbol]["quoteAsset"] == "BTC":
     #         symbols.append(symbol)
-
     # First time you run this, uncomment the next line
     #initialize_database(session, symbols)
 
