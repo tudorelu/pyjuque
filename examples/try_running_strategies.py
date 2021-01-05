@@ -14,7 +14,7 @@ from pyjuque.Plotting.Plotter import PlotData
 def Main():
 	exchange = Binance()
 	symbol = 'BNBUSDT'
-	df = exchange.getSymbolKlines(symbol, '1h', 500)
+	df = exchange.getOHLCV(symbol, '1h', 500)
 	strategy = OTTStrategy(1, 0.1)
 	strategy.setUp(df)
 

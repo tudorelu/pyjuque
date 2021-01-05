@@ -42,7 +42,7 @@ class CustomIndicatorStrategy(Strategy):
 
 if __name__ == '__main__':
     exchange = Binance()
-    df = exchange.getSymbolKlines(symbol="ETHUSDT", interval="5m", limit=4000)
+    df = exchange.getOHLCV(symbol="ETHUSDT", interval="5m", limit=4000)
 
     strategy = CustomIndicatorStrategy()
     strategy.setUp(df)

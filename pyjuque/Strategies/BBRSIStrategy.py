@@ -6,7 +6,7 @@ class BBRSIStrategy(Strategy):
         Params
         --
             `rsi_len` = length of RSI
-            `bb_len` = length of RBollinger Bands
+            `bb_len` = length of Bollinger Bands
             `rsi_ob` = Overbought level of RSI
             `rsi_os` = Oversold level of RSI
     """

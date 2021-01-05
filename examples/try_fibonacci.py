@@ -22,7 +22,7 @@ def horizontal_line(start_time, end_time, value, color=None):
 def Main():
 		exchange = Binance()
 		symbol = "LTCUSDT"
-		df = exchange.getSymbolKlines(symbol, "1h", 8000)
+		df = exchange.getOHLCV(symbol, "1h", 8000)
 
 		start_time = df['time'][0]
 		end_time = df['time'][len(df)-1]
