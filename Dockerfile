@@ -1,27 +1,27 @@
-# FROM python:3.6-alpine
 FROM jackton1/alpine-python3-numpy-pandas:latest
-# FROM tailordev/pandas
 RUN apk update
 RUN apk add make automake gcc g++ kmod kbd
-# RUN apk add make automake gcc g++ subversion python3-dev libffi-dev musl-dev
 WORKDIR /usr/src/app
 VOLUME ["./db"]
-RUN python3 -m pip install yaspin keyboard
-# RUN ARCHFLAGS=-Wno-error=unused-command-line-argument-hard-error-in-future python3 -m pip install --upgrade numpy
+RUN python3 -m pip install yaspin
 COPY docker_requirements.txt ./
-# RUN python3 -m pip install --upgrade pip
 RUN python3 -m pip install --no-cache-dir -r docker_requirements.txt
 COPY . .
+
+# If you want the container to run the bot by running `docker run -it --name pyjuque pyjuque`
 # CMD [ "python3", "./examples/try_BotController.py" ]
 
-# reset
-# docker container rm $(docker container ls -aq) 
 
-# build
+
+
+# 1. build
 # docker build -t pyjuque .
 
-# run
+# 2. run
 # docker run -it --name pyjuque pyjuque python3 examples/try_BotController.py
 
-# kill
+# 3. kill (in other shell)
 # docker kill $(docker ps -aq)
+
+# nuke the container and then run 2. again
+# docker container rm $(docker container ls -aq) 

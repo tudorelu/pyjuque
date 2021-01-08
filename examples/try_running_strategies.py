@@ -16,7 +16,7 @@ def Main():
 	symbol = 'BNBUSDT'
 	df = exchange.getSymbolKlines(symbol, '1h', 500)
 	strategy = OTTStrategy(1, 0.1)
-	strategy.setUp(df)
+	strategy.setup(df)
 
 	signals=[
 		dict(points=strategy.getBuySignalsList(), name="buy_times"),

@@ -50,7 +50,7 @@ def Main():
     # Initialize exchanges and test
     binance = Binance()
     symbol = "LTCBTC"
-    df = binance.getSymbolKlines(symbol, "1m", limit=100000)
+    df = binance.getSymbolKlines(symbol, "1m", limit=1000)
     
     strategy = entry_strategy.strategy_class(*entry_strategy.args)
     strategy.setUp(df)
