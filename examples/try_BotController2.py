@@ -1,6 +1,8 @@
 import os
 import sys
 import time
+import glob, importlib
+from os.path import dirname, basename, isfile, join
 curr_path = os.path.abspath(__file__)
 root_path = os.path.abspath(os.path.join(curr_path, os.path.pardir, os.path.pardir))
 sys.path.append(root_path)
@@ -8,14 +10,20 @@ from pprint import pprint
 from yaspin import yaspin
 from pyjuque.Engine.Models_mysql import Base, Bot, Order, Pair, EntrySettings, ExitSettings, getSession
 from pyjuque.Engine.BotController import BotController
-from pyjuque.Strategies.EMAXStrategy import EMACrossover
-from pyjuque.Strategies.BBRSIStrategy import BBRSIStrategy
-from pyjuque.Strategies.AlwaysBuyStrategy import AlwaysBuyStrategy
+
+Strategies = {}
+__globals = globals()
+for path in glob.glob('pyjuque/Strategies/[!_]*.py'):
+    path, file = os.path.split(path)
+    mod_name = file[:-3]
+    if mod_name != 'BaseStrategy':
+        mod_path = path.replace("/", ".") +'.' + mod_name
+        Strategies[mod_name] = getattr(importlib.import_module(mod_path), mod_name)
+
 from pyjuque.Exchanges.Binance import Binance
 
 time_to_sleep = 10
 bot_name = 'bot1'
-db_name = 'db.db'
 symbols = ['ETHBTC', 'ZILBTC', 'BTCUSDT', 'MKRBTC','ETCBTC','SNXBTC']
 
 
@@ -63,7 +71,11 @@ def initialize_database(session, symbols=[]):
 def Main():
     resetOrdersPairs = False
     # session = getSession('sqlite:///db/' + db_name)
-    session = getSession('mysql+mysqlconnector://root:GNEHefi2013@localhost/pyjuque')
+    db = 'mysql+mysqlconnector://'+os.getenv('DB_USER') +':'\
+        +os.getenv('DB_PASS')+'@'\
+        +os.getenv('DB_HOST')+'/pyjuque'
+        
+    session = getSession(db)
     exchange = Binance(get_credentials_from_env=True)
     
     # Add all symbols on exchange
@@ -75,8 +87,14 @@ def Main():
     #initialize_database(session, symbols)
 
     bot = session.query(Bot).filter_by(name=bot_name).first()
+    print('Available Strategies:')
+    print('')
+    for strategy in Strategies:
+        print(strategy)
+
     # strategy = AlwaysBuyStrategy()
-    strategy = BBRSIStrategy(13, 40, 70, 30)
+    # strategy = BBRSIStrategy(13, 40, 70, 30)
+    strategy  = Strategies['BBRSIStrategy'](13, 40, 70, 30)
 
     bot_controller = BotController(session, bot, exchange, strategy)
     sp = yaspin()
