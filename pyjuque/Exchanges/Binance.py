@@ -711,7 +711,7 @@ class Binance():
             params['origClientOrderId'] = order_id
         else:
             params['orderId'] = order_id
-
+        print(params)
         self._signRequest(params)
         url = Binance.BASE_URL + Binance.ENDPOINTS['order']
         return self._get(url, params, self.headers)

@@ -1,4 +1,6 @@
 __pycache__/
+*.pyc
+graphs/
 *.log
 .env
 .vscode/

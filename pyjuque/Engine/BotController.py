@@ -1,7 +1,10 @@
 from decimal import Decimal
 from uuid import uuid4
+import os
+import yaml
 import time
 import math
+import glob, importlib
 from pprint import pprint
 from pyjuque.Engine.Models import Bot, Pair, Order
 from pyjuque.Engine.OrderManager import placeNewOrder, simulateOrderInfo
@@ -14,6 +17,29 @@ import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 import sys
+
+class BotInitializer:
+    def getStrategies():
+        # Import all strategies by name from folder 
+        Strategies = {}
+        __globals = globals()
+        for path in glob.glob('pyjuque/Strategies/[!_]*.py'):
+            path, file = os.path.split(path)
+            mod_name = file[:-3]
+            if mod_name != 'BaseStrategy':
+                mod_path = path.replace("/", ".") +'.' + mod_name
+                Strategies[mod_name] = getattr(importlib.import_module(mod_path), mod_name)
+        return Strategies
+
+    def getYamlConfig(bot_name = None):
+        # Import bot templates 
+        with open(r'bots_config.yml') as file:
+            bots = yaml.load(file, Loader=yaml.FullLoader)['bots']
+            if bot_name is not None:
+                for bot_config in bots:
+                    if bot_config['name'] == bot_name:
+                        return bot_config
+            return bots[0]
 
 class BotController:
 
@@ -64,7 +90,6 @@ class BotController:
         self.logOrSp("Checking orders state...")
         for order in open_orders:
             self.updateOpenOrder(order)
-
 
     def tryEntryOrder(self, pair):
         """
@@ -127,6 +152,7 @@ class BotController:
         if not self.test_mode: 
             try:
                 exchange_order_info = exchange.getOrder(order.symbol, order.id, is_custom_id=True)
+                print(exchange_order_info)
             except ExchangeConnectionException:
                 self.logOrSp('Error getting data from the exchange for updating open order on {}.'.format(pair.symbol), should_print=True)
                 self.logOrSp(sys.exc_info(), should_print=True)

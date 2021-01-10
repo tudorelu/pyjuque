@@ -21,8 +21,10 @@ def horizontal_line(start_time, end_time, value, color=None):
 
 def Main():
 		exchange = Binance()
-		symbol = "LTCUSDT"
-		df = exchange.getSymbolKlines(symbol, "1h", 8000)
+		symbol = "BTCUSDT"
+		interval = "4h"
+
+		df = exchange.getSymbolKlines(symbol, interval, 8000)
 
 		start_time = df['time'][0]
 		end_time = df['time'][len(df)-1]
@@ -52,8 +54,11 @@ def Main():
 			start_time, end_time, price_min, 
 			color="rgba(0, 0, 255, 255)"))
 
-		PlotData(df, add_candles=False, plot_shapes=lines,
-		plot_title="fib_levels", show_plot=True)
+		PlotData(df, 
+		add_candles=False, 
+		plot_shapes=lines,
+		plot_title="fib_levels_"+symbol.lower() + "_" + interval, 
+		show_plot=True)
 
 
 if __name__ == '__main__':

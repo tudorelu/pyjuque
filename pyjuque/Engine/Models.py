@@ -12,14 +12,14 @@ import math
 
 Base = declarative_base()
 
-def getScopedSession(path='sqlite:///'):
+def getScopedSession(path='sqlite:///db/db.db'):
     some_engine = create_engine(path, echo=False)
     Base.metadata.create_all(some_engine)
     session_factory = sessionmaker(bind=some_engine)
     Session = scoped_session(session_factory)
     return Session
 
-def getSession(path='sqlite:///'):
+def getSession(path='sqlite:///db/db.db'):
     some_engine = create_engine(path, echo=False)
     Base.metadata.create_all(some_engine)
     Session = sessionmaker(bind=some_engine)
@@ -148,5 +148,5 @@ class ExitSettings(Base):
     profit_target = db.Column(db.Float)                           	# Exit when price is at value % profit from entry 
     stop_loss_value = db.Column(db.Float, default=None)             	# Whether to have stop loss or not (and what %)
     is_trailing_stop_loss = db.Column(db.Boolean, default=False)    	# Whether to have trailing stop loss or not (what %)
-    stop_loss_active_after = db.Column(db.Float, default=None)    	# If we have trailing stop loss, whether to activate immediately, or after a value % increase in profit
+    stop_loss_active_after = db.Column(db.Float, default=0)    	# If we have trailing stop loss, whether to activate immediately, or after a value % increase in profit
     exit_on_signal = db.Column(db.Boolean, default=False)       
