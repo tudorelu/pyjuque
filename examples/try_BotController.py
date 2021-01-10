@@ -24,29 +24,29 @@ def Main():
     session = getSession()
     exchange = Binance(get_credentials_from_env=True)
     Strategies = BotInitializer.getStrategies()
-    bot_config = BotInitializer.getYamlConfig(bot_name)
-    if bot_config['symbols'] is not None:
-        symbols = bot_config['strategy']
-    strategy  = Strategies[bot_config['strategy']['name']](**bot_config['strategy']['params'])
     
     bot = session.query(Bot).filter_by(name=bot_name).first()
     if bot is None:
         print('No bot found by name: ' + bot_name + '. Creating...')
         if bot_config['symbols'] is None:
-            # Add all symbols on exchange if none supplied
+            print('No symbols found in template. Adding all...')
             for symbol in exchange.SYMBOL_DATAS.keys():
                 if exchange.SYMBOL_DATAS[symbol]["status"] == "TRADING" \
                     and exchange.SYMBOL_DATAS[symbol]["quoteAsset"] == "BTC":
                     symbols.append(symbol)
         InitializeDatabase(session, symbols, bot_name=bot_name)
+        # Restart?
         Main()
 
+    bot_config = BotInitializer.getYamlConfig(bot_name)
+    if bot_config['symbols'] is not None:
+        symbols = bot_config['strategy']
+    strategy  = Strategies[bot_config['strategy']['name']](**bot_config['strategy']['params'])
     bot_controller = BotController(session, bot, exchange, strategy)
     sp = yaspin()
     bot_controller.sp = sp
     bot_controller.sp_on = True
 
-    exit(0)
     while True:
         try:
             bot_controller.executeBot()

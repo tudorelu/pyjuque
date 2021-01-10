@@ -9,7 +9,7 @@ bots:
         bb_len: 40
         rsi_ob: 70
         rsi_os: 30
-    symbols:
+    symbols: # optionally empty
       - ETHBTC
       - ZILBTC
       - BTCUSDT
