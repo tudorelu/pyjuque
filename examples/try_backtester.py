@@ -50,11 +50,12 @@ exit_settings:dotdict = dotdict(dict(
 def Main():
     # Initialize exchanges and test
     binance = Binance()
+    
     # symbol = "ZILBTC"
     # symbol = "XRPBTC"
     symbol = "BTCUSDT"
     interval = "1m"
-    df = binance.getSymbolKlines(symbol, interval, limit=1000)
+    df = binance.getOHLCV(symbol, interval, limit=1000)
     
     strategy = entry_strategy.strategy_class(*entry_strategy.args)
     strategy.setUp(df)

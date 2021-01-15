@@ -15,7 +15,7 @@ import plotly.graph_objs as go
 def Maine():
 		exchange = Binance()
 		symbol = 'BTCUSDT'
-		df = exchange.getSymbolKlines(symbol, '1d')
+		df = exchange.getOHLCV(symbol, '1d')
 
 		AddIndicator(df, 'sma', 'volma', 'volume', 10)
 		signal = df.loc[df['volume'] > 2.4 * df['volma']]

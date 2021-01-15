@@ -400,19 +400,19 @@ class Binance():
             initial_limit = 1000
         # First, we get the last initial_limit candles, starting at end_time and going
         # backwards (or starting in the present moment, if end_time is False)
-        df = self.getSymbolKlines(
+        df = self.getOHLCV(
             symbol, interval, limit=initial_limit, end_time=end_time, cast_to=cast_to)
         while repeat_rounds > 0:
             # Then, for every other 1000 candles, we get them, but starting at the beginning
             # of the previously received candles.
-            df2 = self.getSymbolKlines(
+            df2 = self.getOHLCV(
                 symbol, interval, limit=1000, end_time=df['time'][0], cast_to=cast_to)
             df = df2.append(df, ignore_index = True)
             repeat_rounds = repeat_rounds - 1
         
         return df
 
-    def getSymbolKlines(self, symbol:str, interval:str, 
+    def getOHLCV(self, symbol:str, interval:str, 
     limit:int=1000, end_time:any=False, start_time:any=False, cast_to:type=float):
         """
         Gets candlestick data for one symbol 

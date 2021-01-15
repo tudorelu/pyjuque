@@ -10,6 +10,7 @@ class Strategy(ABC):
 
     def setUp(self, df):
         self.df = df
+
         if self.indicators is not None:
             # Create all asked indicators
             for indicator in self.indicators:
@@ -36,8 +37,10 @@ class Strategy(ABC):
                     # Create a list of all arguments that are not the 
                     # indicator name or column name
                     AddIndicator(
-                        self.df, indicator['indicator_name'], 
-                        indicator['col_name'], *args)
+                        self.df, 
+                        indicator['indicator_name'], 
+                        indicator['col_name'], 
+                        *args)
         return self.df
 
     @abstractmethod
@@ -57,10 +60,10 @@ class Strategy(ABC):
 
     def checkToExitLongPosition(self, i):
         """ Checks whether we should exit a long position
-        (Most times this is equivalent to checkShortSignal) """
+        (By default this is equivalent to checkShortSignal) """
         return self.checkShortSignal(i)
 
     def checkToExitShortPosition(self, i):
         """ Checks whether we should exit a short position
-        (Most times this is equivalent to checkLongSignal) """
+        (By default this is equivalent to checkLongSignal) """
         return self.checkLongSignal(i)

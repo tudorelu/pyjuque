@@ -35,7 +35,7 @@ def Main():
 	symbol = "LTCUSDT"
 	binance = Binance()
 	sd = binance.SYMBOL_DATAS[symbol]
-	df = binance.getSymbolKlines(symbol, "15m", limit=10000)
+	df = binance.getOHLCV(symbol, "15m", limit=10000)
 	
 	def fitness_function(individual):
 		pt = round(Decimal(int(individual[4])) / Decimal(1000), 3)

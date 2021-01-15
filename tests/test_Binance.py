@@ -52,7 +52,7 @@ class BinanceTests(unittest.TestCase):
 		timeframe = "1m"
 		symbol = "BTCUSDT"
 
-		df = self.exchange.getSymbolKlines(symbol, timeframe, limit)
+		df = self.exchange.getOHLCV(symbol, timeframe, limit)
 		assert isinstance(df, DataFrame), "getSymbolKlines should return a dataframe"
 
 		length = len(df) - 1
