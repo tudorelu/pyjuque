@@ -1,6 +1,6 @@
 from pyjuque.Strategies.BaseStrategy import Strategy # pylint: disable=E0401
 
-class EMACrossover(Strategy):
+class EMAXStrategy(Strategy):
 
     def __init__(self, fast_period, slow_period):
         # Minimum period needed for indicators to be calculated

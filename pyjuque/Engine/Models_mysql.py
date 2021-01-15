@@ -12,14 +12,14 @@ import math
 
 Base = declarative_base()
 
-def getScopedSession(path='sqlite:///db/db.db'):
+def getScopedSession(path='sqlite:///'):
     some_engine = create_engine(path, echo=False)
     Base.metadata.create_all(some_engine)
     session_factory = sessionmaker(bind=some_engine)
     Session = scoped_session(session_factory)
     return Session
 
-def getSession(path='sqlite:///db/db.db'):
+def getSession(path='sqlite:///'):
     some_engine = create_engine(path, echo=False)
     Base.metadata.create_all(some_engine)
     Session = sessionmaker(bind=some_engine)
@@ -71,7 +71,7 @@ class Order(Base):
     side = db.Column(db.String(30), index=True)
     is_entry = db.Column(db.Boolean, default=True)
     is_closed = db.Column(db.Boolean, default=False)
-    matched_order_id = db.Column(db.Integer, db.ForeignKey('order.id'), default=None)
+    matched_order_id = db.Column(db.String(32), db.ForeignKey('order.id'), default=None)
     is_test = db.Column(db.Boolean)
     order_type = db.Column(db.String(30), index = True)
     last_checked_time = db.Column(db.Integer)
@@ -84,7 +84,7 @@ class Pair(Base):
     bot_id = db.Column(db.Integer, db.ForeignKey('bot.id'))
     symbol = db.Column(db.String(13), index=True)
     active = db.Column(db.Boolean, default=True)
-    current_order_id = db.Column(db.Integer, db.ForeignKey('order.id'))
+    current_order_id = db.Column(db.String(32), db.ForeignKey('order.id'))
     profit_loss = db.Column(SqliteDecimal(13), default=1)
 
 class Bot(Base):
@@ -128,7 +128,7 @@ class EntrySettings(Base):
   id = db.Column(db.Integer, primary_key=True)                  	# Unique ID
   name = db.Column(db.String(30))                                 # Name (for UI)
   bots = relationship('Bot', backref=backref('entry_settings'))
-  open_buy_order_time_out = db.Column(db.Integer, default=math.inf)
+  open_buy_order_time_out = db.Column(db.Integer, default=0)
   initial_entry_allocation = db.Column(db.Integer, default=None)	# What % of funds allocated to the bot will go to an initial entry
   subsequent_entries = db.Column(db.Integer, default=0)         	# Are there subsequent entries
   subsequent_entry_allocation = db.Column(db.Float, default=1)  	# What % of the initial quantity will we buy on a 
@@ -148,5 +148,5 @@ class ExitSettings(Base):
     profit_target = db.Column(db.Float)                           	# Exit when price is at value % profit from entry 
     stop_loss_value = db.Column(db.Float, default=None)             	# Whether to have stop loss or not (and what %)
     is_trailing_stop_loss = db.Column(db.Boolean, default=False)    	# Whether to have trailing stop loss or not (what %)
-    stop_loss_active_after = db.Column(db.Float, default=0)    	# If we have trailing stop loss, whether to activate immediately, or after a value % increase in profit
+    stop_loss_active_after = db.Column(db.Float, default=None)    	# If we have trailing stop loss, whether to activate immediately, or after a value % increase in profit
     exit_on_signal = db.Column(db.Boolean, default=False)       
