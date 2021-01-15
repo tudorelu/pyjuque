@@ -4,6 +4,9 @@ from abc import ABC, abstractmethod
 from pprint import pprint
 
 class Strategy(ABC):
+
+    minimum_period = 123
+
     def __init__(self):
         self.df = None
         self.indicators = None

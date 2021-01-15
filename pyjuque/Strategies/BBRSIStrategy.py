@@ -16,6 +16,7 @@ class BBRSIStrategy(Strategy):
         rsi_ob = 50,
         rsi_os = 50):
 
+        print(self.minimum_period)
         self.rsi_ob = rsi_ob
         self.rsi_os = rsi_os
         self.bb_len = bb_len
@@ -23,6 +24,7 @@ class BBRSIStrategy(Strategy):
         self.minimum_period = max(100, bb_len, rsi_len)
         # print("rsi_len {}, bb_len {}, rsi_ob {}, rsi_os {}".format(
         #     rsi_len, bb_len, rsi_ob, rsi_os))
+        print(self.minimum_period)
         self.chooseIndicators()
 
     def chooseIndicators(self):

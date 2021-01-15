@@ -7,10 +7,10 @@ from uuid import uuid4
 from sys import exc_info
 from pprint import pprint
 
-from pyjuque.Engine.Models import Bot, Pair, Order
+from pyjuque.Engine.Models import TABot as Bot, Pair, Order
 
-# This may be in the Order Manager
-def placeNewOrder(exchange, symbol, pair, order=None, test_mode=True, order_params=None):
+
+def placeNewOrder(exchange, symbol, pair=None, order=None, test_mode=True, order_params=None):
     """ Create Order model and place order to exchange. """
 
     # print("2: Order params are")
@@ -18,23 +18,14 @@ def placeNewOrder(exchange, symbol, pair, order=None, test_mode=True, order_para
     new_order_model = createOrderModel(symbol, test_mode, order_params, order)
 
     if not test_mode:
-        try:
-            new_order_response = placeOrderFromOrderModel(exchange, new_order_model)
-        except Exception as e:
-            print('\n\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\nSTART EXCEPTION TRACE \n')
-            print('placeOrderFromOrderModel() failed')
-            pprint(exc_info())
-            pprint(e)
-            print_exc()
-            print('\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\nEND EXCEPTION TRACE \n\n')
-            return
+        new_order_response = placeOrderFromOrderModel(exchange, new_order_model)
     else:
         new_order_response = dict(message='success')
     
     exchange.updateSQLOrderModel(new_order_model, new_order_response, None)
     return new_order_model
 
-# This would be in the Order Manager
+
 def createOrderModel(symbol, test_mode, order_params, order):
     """ Create Order Model and fill only mandatory params. 
     Other params are filled after order is filled. """
@@ -71,7 +62,7 @@ def createOrderModel(symbol, test_mode, order_params, order):
     )
     return new_order_model
 
-# This would be in the Order Manager
+
 def placeOrderFromOrderModel(exchange, order_model):
     """ Places orders from db model to exchange."""
     if order_model.order_type == 'limit':
@@ -91,7 +82,7 @@ def placeOrderFromOrderModel(exchange, order_model):
             order_model.is_test, custom_id=order_model.id)
     return order_response
 
-# This would be in the Order Manager
+
 def simulateOrderInfo(exchange, order, kline_interval):
     """ Used when BotController is in test mode. 
     Simulates order info returned by exchange."""
@@ -136,6 +127,14 @@ def simulateOrderInfo(exchange, order, kline_interval):
 
     order.last_checked_time = new_last_checked_time
     return order_status
+
+
+def cancelOrder(exchange, order):
+    if order.order_type == 'stop_loss':
+        return exchange.cancelAlgoOrder(order.symbol, order.id, is_custom_id=True)
+
+    return exchange.cancelOrder(order.symbol, order.id, is_custom_id=True)
+
 
 def klineIntervalToMs(kline_interval:str):
     number = int(kline_interval[:-1])

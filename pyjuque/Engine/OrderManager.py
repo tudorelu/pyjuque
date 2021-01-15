@@ -2,7 +2,7 @@ import time
 import math
 from uuid import uuid4
 from pprint import pprint
-from pyjuque.Engine.Models import Bot, Pair, Order
+from pyjuque.Engine.Models import TABot as Bot, Pair, Order
 
 # This may be in the Order Manager
 def placeNewOrder(exchange, symbol, pair, order=None, test_mode=True, order_params=None):

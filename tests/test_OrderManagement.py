@@ -29,7 +29,7 @@ import datetime as dt
 # Pyjuque Modules
 from pyjuque.Exchanges.Binance import Binance 
 from pyjuque.Strategies.EMAXStrategy import EMACrossover 
-from pyjuque.Engine import backtest, BotController, Order, Pair, Bot, EntrySettings, ExitSettings
+from pyjuque.Engine import backtest, BotController, Order, Pair, TABot as Bot, EntrySettings, ExitSettings
 from pyjuque.Plotting.Plotter import PlotData 
 
 class OrderManagementTests(unittest.TestCase):

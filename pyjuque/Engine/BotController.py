@@ -3,7 +3,7 @@ from uuid import uuid4
 import time
 import math
 from pprint import pprint
-from pyjuque.Engine.Models import Bot, Pair, Order
+from pyjuque.Engine.Models import TABot as Bot, Pair, Order
 from pyjuque.Engine.OrderManager import placeNewOrder, simulateOrderInfo
 from pyjuque.Exchanges.Base.Exceptions import \
     InvalidCredentialsException, \

@@ -7,7 +7,7 @@ sys.path.append(root_path)
 
 import time
 
-from pyjuque.Engine.Models import Base, Bot, Order, Pair, EntrySettings, ExitSettings, getSession
+from pyjuque.Engine.Models import Base, TABot as Bot, Order, Pair, EntrySettings, ExitSettings, getSession
 from pyjuque.Engine.BotController import BotController
 from pprint import pprint
 

@@ -3,8 +3,8 @@ from uuid import uuid4
 import time
 import math
 from pprint import pprint
-from pyjuque.Engine.Models import Bot, Pair, Order
-from pyjuque.Engine.UniversalOrderManager import placeNewOrder, simulateOrderInfo
+from pyjuque.Engine.Models import TABot as Bot, Pair, Order
+from pyjuque.Engine.UniversalOrderManager import placeNewOrder, simulateOrderInfo, cancelOrder
 from pyjuque.Exchanges.Base.Exceptions import InvalidCredentialsException, \
     InternalExchangeException, ExchangeConnectionException
 from traceback import print_exc
@@ -25,6 +25,7 @@ class BotController:
         self.sp = sp
         self.sp_on = sp_on
         self.logger_on = logger_on
+
 
     def executeBot(self):
         """ The main execution loop of the bot """
@@ -111,6 +112,7 @@ class BotController:
                     quantity=quantity, order_type='limit', is_entry=True)
 
             self.session.commit()
+
 
     def updateOpenOrder(self, order):
         """
@@ -201,12 +203,14 @@ class BotController:
 
         self.session.commit()
 
+
     def reviveOriginalBuyOrder(self, order):
         """ If sell order was cancelled due to some reason, revive buy order and look to exit again. """
         original_buy_order = self.bot.getOrder(order.position_id)
         original_buy_order.is_closed = False
         original_buy_order.executed_quantity = Decimal(order.original_quantity) - Decimal(order.executed_quantity)
         return original_buy_order
+
 
     def updateOpenBuyOrder(self, order, pair):
         """
@@ -222,7 +226,7 @@ class BotController:
 
             if not self.test_mode:
                 try:
-                    order_result = exchange.cancelOrder(order.symbol, order.id, is_custom_id=True)
+                    order_result = cancelOrder(exchange, order)
                 except Exception as e:
                     self.logOrShow('cancelOrder() failed')
                     self.logOrShow(e)
@@ -261,7 +265,7 @@ class BotController:
 
                 if not self.test_mode:
                     try:
-                        order_result = exchange.cancelOrder(order.symbol, order.id)
+                        order_result = cancelOrder(exchange, order)
                     except Exception as e:
                         self.logOrShow('cancelOrder() failed')
                         self.logOrShow(e)
@@ -278,6 +282,7 @@ class BotController:
                     quantity=quantity,
                     order_type=order_type,
                     side=side)
+
 
     def tryExitOrder(self, order, pair):
         """ If strategy returns exit signal look to place exit order. """
@@ -348,11 +353,13 @@ class BotController:
                 quantity=quantity, side=side, 
                 order_type=order_type)
 
+
     def processClosedPosition(self, order, pair):
         """ Update status of closed position """
         order.is_closed = True
         pair.active = True
         pair.current_order_id = None
+
 
     def placeOrder(self, symbol, pair, order=None, **order_params):
         """ Create Order model and place order to exchange. """
@@ -367,6 +374,7 @@ class BotController:
             self.session.add(new_order_model)
             self.logOrShow('{} Order was placed succesfully on {}'.format(
                     new_order_model.side, symbol), should_print=True)
+
 
     def syncModels(self, pair, order, new_order_model):
         """ Sync pairs and orders to new status """
@@ -384,6 +392,7 @@ class BotController:
             pair.active = False
             pair.current_order_id = new_order_model.id
 
+
     def computeQuantity(self, order):
         """ Compute exit quantity so that also partially 
         filled orders can be handled."""
@@ -393,6 +402,7 @@ class BotController:
             exit_quantity = Decimal(order.original_quantity) \
                 - Decimal(order.executed_quantity)
         return exit_quantity
+
 
     def logOrShow(self, message, should_print=False, force=False):
         if self.sp_on and self.sp != None:
