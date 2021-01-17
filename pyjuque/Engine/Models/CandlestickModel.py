@@ -1,11 +1,6 @@
 import sqlalchemy as db
-from datetime import datetime
-from decimal import Decimal
-import sqlalchemy.types as types
 from sqlalchemy import create_engine
-from sqlalchemy.orm import backref, relationship, sessionmaker
-from sqlalchemy.orm import scoped_session
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import backref, sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 
 from pyjuque.Engine.Models.Utils import SqliteDecimal
@@ -24,9 +19,10 @@ class CandlestickModel(Base):
     __tablename__ = 'candlestick'
     symbol = db.Column(db.String(13), index=True, primary_key=True)
     timeframe = db.Column(db.String(5), index=True, primary_key=True)
-    timestamp = db.Column(db.Integer, index=True, primary_key=True)
-    open = db.Column(SqliteDecimal(13))
-    high = db.Column(SqliteDecimal(13))
-    low = db.Column(SqliteDecimal(13))
-    close = db.Column(SqliteDecimal(13))
-    volume = db.Column(SqliteDecimal(13))
+    timestamp = db.Column(db.String, index=True, primary_key=True)
+    datetime = db.Column(db.DateTime)
+    open = db.Column(db.String)
+    high = db.Column(db.String)
+    low = db.Column(db.String)
+    close = db.Column(db.String)
+    volume = db.Column(db.String)
