@@ -1,23 +1,18 @@
+import sys
+import time
 from os import getenv
 from os.path import abspath, join, pardir
-import sys
 sys.path.append(abspath(join(abspath(__file__), pardir, pardir)))
 
-import time
-
-from pyjuque.Engine.Models import Base,  TABot as Bot, Order, Pair, EntrySettings, ExitSettings, getSession
-from pyjuque.Engine.UniversalBotController import BotController
+from pyjuque.Engine.Models.BotModels import TABot as Bot, Order, Pair, EntrySettings, ExitSettings, getSession
+from pyjuque.Engine.BotController import BotController
 from pprint import pprint
-
-from pyjuque.Strategies.EMAXStrategy import EMACrossover
 from pyjuque.Strategies.BBRSIStrategy import BBRSIStrategy
 from pyjuque.Strategies.AlwaysBuyStrategy import AlwaysBuyStrategy
-
 from pyjuque.Exchanges.CcxtExchange import CcxtExchange
-
 from yaspin import yaspin
 
-time_to_sleep = 10
+time_to_sleep = 100
 
 def initialize_database(session, symbols=[]):
     """ Function that initializes the database
@@ -33,18 +28,13 @@ def initialize_database(session, symbols=[]):
     session.add(myobject)
 
     entrysets = EntrySettings(
-        id = 1,
-        name ='TimStoploss',
-        initial_entry_allocation = 25,
-        signal_distance = 1,  # in %
+        initial_entry_allocation = 50,
+        # signal_distance = 1,  # in %
         )
     
     exitsets = ExitSettings(
-        id = 1,
-        name = 'TimLoss',
-        profit_target = 3,      # in %
-        stop_loss_value = 10,   # in %
-        exit_on_signal = False
+        profit_target = 1,      # in %
+        stop_loss_value = 1,   # in %
         )
     myobject.entry_settings = entrysets
     myobject.exit_settings = exitsets
@@ -68,25 +58,17 @@ def Main():
         'secret': getenv('BINANCE_API_SECRET'),
         # 'password': getenv('OKEX_PASSWORD'),
         'timeout': 30000,
-        'verbose': True,
+        # 'verbose': True,
         'enableRateLimit': True,
     })
 
     symbols = ['TRX/ETH', 'XRP/ETH']
 
-    # for symbol in exchange.SYMBOL_DATAS.keys():
-    #     if exchange.SYMBOL_DATAS[symbol]["status"] == "TRADING" \
-    #         and exchange.SYMBOL_DATAS[symbol]["quoteAsset"] == "BTC":
-    #         symbols.append(symbol)
-
     # First time you run this, uncomment the next line
     # initialize_database(session, symbols)
 
     bot = session.query(Bot).filter_by(name='test_bot_ccxt_tudor').first()
-    # input your path to credentials here.
-
-    strategy = AlwaysBuyStrategy()
-    # strategy = BBRSIStrategy(13, 40, 70, 30)
+    strategy = AlwaysBuyStrategy() # BBRSIStrategy(13, 40, 70, 30)
     bot_controller = BotController(session, bot, exchange, strategy)
 
     sp = yaspin()
@@ -105,4 +87,4 @@ def Main():
             left_to_sleep -= 1
 
 if __name__ == '__main__':
-        Main()
+    Main()

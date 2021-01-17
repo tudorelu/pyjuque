@@ -129,3 +129,11 @@ dmypy.json
 .pyre/
 *.db
 .vscode/
+
+*.pyc
+graphs/
+*.log
+.env
+.DS_Store
+*.db
+!./db/

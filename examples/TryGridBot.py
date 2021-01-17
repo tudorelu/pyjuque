@@ -7,7 +7,7 @@ from yaspin import yaspin
 from pprint import pprint
 from decimal import Decimal
 from pyjuque.Exchanges.CcxtExchange import CcxtExchange
-from pyjuque.Engine.GridBot import GridBot
+from pyjuque.Engine.GridBotController import GridBotController
 
 from traceback import print_exc
 
@@ -129,7 +129,7 @@ if __name__ == '__main__':
     time_to_sleep = 10
     sp = yaspin()
     screen = curses.initscr()
-    bot = GridBot() #('GridBot_OKEX_LTCUSDT_300_15_0point5_live')
+    bot = GridBotController() #('GridBot_OKEX_LTCUSDT_300_15_0point5_live')
     bot.sp = sp
     bot.screen = screen
     bot.create(okex, symbol, total_amount, trade_amount, trade_step, total_trades)

@@ -1,11 +1,17 @@
 import sqlalchemy as db
 from sqlalchemy import create_engine
-from sqlalchemy.orm import backref, sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
-
+from sqlalchemy.orm import backref, sessionmaker, scoped_session
 from pyjuque.Engine.Models.Utils import SqliteDecimal
 
 Base = declarative_base()
+
+def getScopedSession(path='sqlite:///'):
+    some_engine = create_engine(path, echo=False)
+    Base.metadata.create_all(some_engine)
+    session_factory = sessionmaker(bind=some_engine)
+    Session = scoped_session(session_factory)
+    return Session
 
 def getSession(path='sqlite:///', default_class=Base):
     some_engine = create_engine(path, echo=False)
@@ -14,6 +20,7 @@ def getSession(path='sqlite:///', default_class=Base):
     session = Session()
     return session
 
+Base = declarative_base()
 
 class CandlestickModel(Base):
     __tablename__ = 'candlestick'

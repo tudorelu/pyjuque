@@ -12,7 +12,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-class GridBot():
+class GridBotController:
 
     def __init__(self, name=None):
         self.sp = False

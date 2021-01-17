@@ -1,0 +1,18 @@
+bots:
+  - 
+    name: bot1
+    sleep: 10
+    strategy:
+      name: BBRSIStrategy
+      params:
+        rsi_len: 13
+        bb_len: 40
+        rsi_ob: 70
+        rsi_os: 30
+    symbols: # optionally empty
+      - ETHBTC
+      - ZILBTC
+      - BTCUSDT
+      - XLMBTC
+      - LTCBTC
+      - BNBBTC

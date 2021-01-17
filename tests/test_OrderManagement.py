@@ -28,7 +28,7 @@ import datetime as dt
 
 # Pyjuque Modules
 from pyjuque.Exchanges.Binance import Binance 
-from pyjuque.Strategies.EMAXStrategy import EMACrossover 
+from pyjuque.Strategies.EMAXStrategy import EMAXStrategy 
 from pyjuque.Engine import backtest, BotController, Order, Pair, TABot as Bot, EntrySettings, ExitSettings
 from pyjuque.Plotting.Plotter import PlotData 
 
@@ -80,14 +80,14 @@ class OrderManagementTests(unittest.TestCase):
 
         # Create bot
         bot = Bot(
-                    id=self.bot_id,
-                    name=self.bot_name,
-                    quote_asset=self.quote_asset,
-                    starting_balance=self.starting_balance,
-                    current_balance=self.current_balance,
-                    # profit_target=self.profit_target,
-                    test_run=self.test_run,
-                    )
+            id=self.bot_id,
+            name=self.bot_name,
+            quote_asset=self.quote_asset,
+            starting_balance=self.starting_balance,
+            current_balance=self.current_balance,
+            # profit_target=self.profit_target,
+            test_run=self.test_run,
+            )
         # Create entry and exit settings
         entrysets = EntrySettings(
             id = 1,
@@ -107,18 +107,18 @@ class OrderManagementTests(unittest.TestCase):
 
         # Create ETHBTC pair
         ethpair = Pair(
-                        id=self.pair_id_eth,
-                        bot_id=self.bot_id,
-                        symbol=self.symbol_eth,
-                        profit_loss=self.profit_loss_eth,
-                            )
+            id=self.pair_id_eth,
+            bot_id=self.bot_id,
+            symbol=self.symbol_eth,
+            profit_loss=self.profit_loss_eth,
+        )
         # Create ADABTC pair
         adapair = Pair(
-                        id=self.pair_id_ada,
-                        bot_id=self.bot_id,
-                        symbol=self.symbol_ada,
-                        profit_loss=self.profit_loss_ada,
-                            )
+            id=self.pair_id_ada,
+            bot_id=self.bot_id,
+            symbol=self.symbol_ada,
+            profit_loss=self.profit_loss_ada,
+        )
 
         # Create ethereum buy order
         eth_order = Order(
@@ -153,7 +153,7 @@ class OrderManagementTests(unittest.TestCase):
         self.session.commit()
 
         self.bot = self.session.query(Bot).filter_by(name=self.bot_name).first()
-        self.strategy = EMACrossover(5, 30)
+        self.strategy = EMAXStrategy(5, 30)
 
         self.om  = BotController(
             bot=self.bot, 
@@ -187,8 +187,8 @@ class OrderManagementTests(unittest.TestCase):
         mock_getSymbolKlines.return_value = self.df_ADABTC_1k
 
         # Case where false buy signal is returned by strategy.
-        with patch('pyjuque.Strategies.EMAXStrategy.EMACrossover.setUp') as mockSetupStrategy:
-            with patch('pyjuque.Strategies.EMAXStrategy.EMACrossover.checkLongSignal', return_value = False):
+        with patch('pyjuque.Strategies.EMAXStrategy.EMAXStrategy.setUp') as mockSetupStrategy:
+            with patch('pyjuque.Strategies.EMAXStrategy.EMAXStrategy.checkLongSignal', return_value = False):
                 with patch('pyjuque.Engine.Models.Order') as mockOrder:
                     self.om.tryEntryOrder(pair)
                     self.assertEqual(mockSetupStrategy.call_count, 1)
@@ -199,15 +199,15 @@ class OrderManagementTests(unittest.TestCase):
 
         # create mock orderManagement object with mock db session
         om_mock_database = BotController(
-                            session=mock_session, 
-                            bot=self.bot, 
-                            exchange=self.exchange, 
-                            strategy=self.strategy
-                            )
+            session=mock_session, 
+            bot=self.bot, 
+            exchange=self.exchange, 
+            strategy=self.strategy
+        )
 
         # Case where true buy signal is returned when test_run.
-        with patch('pyjuque.Strategies.EMAXStrategy.EMACrossover.setUp') as mockSetupStrategy:
-            with patch('pyjuque.Strategies.EMAXStrategy.EMACrossover.checkLongSignal', return_value = True):
+        with patch('pyjuque.Strategies.EMAXStrategy.EMAXStrategy.setUp') as mockSetupStrategy:
+            with patch('pyjuque.Strategies.EMAXStrategy.EMAXStrategy.checkLongSignal', return_value = True):
                 om_mock_database.tryEntryOrder(pair)
                 self.assertEqual(mockSetupStrategy.call_count, 1)
                 self.assertEqual(mock_session.add.call_count, 1)		
@@ -222,15 +222,15 @@ class OrderManagementTests(unittest.TestCase):
         
         # create mock OrderManagement object with mock db session and real run.
         om_mock_database = BotController(
-                            session=mock_session, 
-                            bot=self.bot_not_test, 
-                            exchange=self.exchange, 
-                            strategy=self.strategy
-                            )
+            session=mock_session, 
+            bot=self.bot_not_test, 
+            exchange=self.exchange, 
+            strategy=self.strategy
+        )
 
         # Case where true buy signal is returned when not a test_run.										
-        with patch('pyjuque.Strategies.EMAXStrategy.EMACrossover.setUp') as mockSetupStrategy:
-            with patch('pyjuque.Strategies.EMAXStrategy.EMACrossover.checkLongSignal', return_value = True):
+        with patch('pyjuque.Strategies.EMAXStrategy.EMAXStrategy.setUp') as mockSetupStrategy:
+            with patch('pyjuque.Strategies.EMAXStrategy.EMAXStrategy.checkLongSignal', return_value = True):
                 with patch('pyjuque.Exchanges.Binance.Binance.placeLimitOrder', return_value = 'success') as mock_place_limit_order:
                     with patch('pyjuque.Exchanges.Binance.Binance.updateSQLOrderModel') as mock_updateSQLOrder:
                         om_mock_database.tryEntryOrder(pair)
@@ -243,15 +243,15 @@ class OrderManagementTests(unittest.TestCase):
         # Create new mock db session
         mock_session = AlchemyMagicMock()
         om_mock_database = BotController(
-                                        session=mock_session, 
-                                        bot=self.bot_not_test, 
-                                        exchange=self.exchange, 
-                                        strategy=self.strategy
-                                        )
+            session=mock_session, 
+            bot=self.bot_not_test, 
+            exchange=self.exchange, 
+            strategy=self.strategy
+        )
 
         # Case where true buy signal but placeLimitOrder had an error.									
-        with patch('pyjuque.Strategies.EMAXStrategy.EMACrossover.setUp') as mockSetupStrategy:
-            with patch('pyjuque.Strategies.EMAXStrategy.EMACrossover.checkLongSignal', return_value = True):
+        with patch('pyjuque.Strategies.EMAXStrategy.EMAXStrategy.setUp') as mockSetupStrategy:
+            with patch('pyjuque.Strategies.EMAXStrategy.EMAXStrategy.checkLongSignal', return_value = True):
                 with patch('pyjuque.Exchanges.Binance.Binance.placeLimitOrder', return_value = 'code') as mock_place_limit_order:
                     with patch('pyjuque.Exchanges.Binance.Binance.updateSQLOrderModel') as mock_updateSQLOrder:
                         om_mock_database.tryEntryOrder(pair)

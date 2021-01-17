@@ -7,8 +7,8 @@ sys.path.append(root_path)
 
 import time
 
-from pyjuque.Engine.Models import Base, TABot as Bot, Order, Pair, EntrySettings, ExitSettings, getSession
-from pyjuque.Engine.BotController import BotController
+from pyjuque.Engine.Models import Base, Bot, Order, Pair, EntrySettings, ExitSettings, getSession
+from pyjuque.Engine.BotController_old import BotController
 from pprint import pprint
 
 from pyjuque.Strategies.EMAXStrategy import EMACrossover
@@ -99,4 +99,4 @@ def Main():
             left_to_sleep -= 1
 
 if __name__ == '__main__':
-        Main()
+    Main()

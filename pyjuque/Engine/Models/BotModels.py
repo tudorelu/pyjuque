@@ -1,14 +1,10 @@
+import math
 import sqlalchemy as db
 from datetime import datetime
 from sqlalchemy import create_engine
-from sqlalchemy.orm import backref, relationship, sessionmaker
-from sqlalchemy.orm import scoped_session
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import backref, relationship, scoped_session, sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
-
 from pyjuque.Engine.Models.Utils import SqliteDecimal
-
-import math
 
 Base = declarative_base()
 
