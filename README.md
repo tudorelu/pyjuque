@@ -2,7 +2,7 @@
 **PYJUQUE**   &nbsp; &nbsp;  *(pai-jook)*
 *(**Py**-thon **Ju**-ju **Qu**-ant **E**-ngine)*
 
-This project implements the basic functionality required to engage in algorithmic trading. It can be regarded as a starting point for more complex trading bots, which implements the following features:
+This project implements the basic functionality required to engage in algorithmic trading. It can be regarded as a starting point for more complex trading bots.
 
 ## Getting Started
 Make sure you have pip installed. Run:
@@ -11,43 +11,20 @@ Make sure you have pip installed. Run:
 pip install -r requirements.txt
 ```
 
-Add a .env file in the root filepath, then populate it with the following lines
+Add a .env file in the root filepath, then populate it with the following lines. Checkout this [example .env file](/.env.example)
 
 ```
 BINANCE_API_KEY=...
 BINANCE_API_SECRET=...
 ```
 
-You should be good to go! Check out the example section.
+You should be good to go! Check out the example section. 
 
 ### Structure
 Code is contained in `pyjuque`. Tests are in `tests`.
+
 ## Features
-### Plotting
-There is some basic functionality for plotting in `pyjuque/Plotter`
-
-### Exchanges
-At `pyjuque/Exchanges`. 
-
-  - [Binance](/pyjuque/Exchanges/Binance.py) - based on the official [REST API](https://github.com/binance-exchange/binance-official-api-docs/blob/master/rest-api.md)
-
-In progress implementing multiple exchanges with [ccxt](https://github.com/ccxt/ccxt).
-
-### Backtesting
-At `pyjuque/Engine/Backtester`. 
-
-Backtester infrastructure currently supports:
-  - stop loss, trailing stop loss
-  - subsequent entries logic (backtest as if Dollar Cost Averaging is enabled)
-
-Checkout this [example](/examples/try_backtester.py).
-
-### Indicators
-At `pyjuque/Indicators`. 
-
-Started implementing the Indicators module which currently contains some indicators from pyti. Undergoing integration with [pandas_ta](https://github.com/twopirllc/pandas-ta).
-
-The thinking is that this module should allow us to easily and quickly compute any of the hundreds of indicators out there and to use them in strategies & backtesting. Should seamlessly connect to the **Strategies** module.
+This library implements the following features:
 
 ### Strategies
 At `pyjuque/Strategies`. 
@@ -58,7 +35,60 @@ A base module which allows us to define buying & selling strategies for crypto a
 `checkLongSignal`, `checkShortSignal`, 
 `getBuySignalsList` and `getSellSignalsList` (the last two to be used for backtesting). 
 
-Currently contains a few basic strategies. More strategies will be added together with a **build-your-own** strategy template. Should seamlessly connect to the **Backtesting** & **Bot Controller** modules.
+Currently contains a few basic strategies. More strategies will be added together with a **build your own** strategy template. Should seamlessly connect to the **Backtesting** & **Bot Controller** modules.
+
+
+### Bot Controller
+At `pyjuque/Engine/BotController.py`. 
+
+A module which handles the buying and selling of assets, given simple or more advanced rules, allowing us to run a strategy indefinitely. Checkout this [example](/examples/TryUniversalBotController.py).
+
+##### Current Features:
+- Placing Entry (Buy) Orders on Signal 
+- Market, Limit & Stop Loss orders 
+- Placing Exit Order when Entry Order was fulfilled
+- Trading below/above signal by some %
+
+##### Future Features: 
+- OCO orders
+- Selling on signals
+- Trailing stop loss
+- Multiple trade entries (in case trade goes against you)
+
+State persistence Using SQLAlchemy.
+
+
+### Backtesting
+At `pyjuque/Engine/Backtester`. 
+
+Backtester infrastructure currently supports:
+  - stop loss, trailing stop loss
+  - subsequent entries logic (as if Dollar Cost Averaging is enabled)
+
+Checkout this [example](/examples/try_backtester.py).
+
+### Plotting
+There is some basic functionality for plotting in `pyjuque/Plotter`
+
+### Exchange Connectors
+
+Implementing multiple exchanges with [ccxt](https://github.com/ccxt/ccxt). Check out implementation at [CcxtExchange](/pyjuque/Exchanges/CcxtExchange.py). Currently implemented:
+
+binance
+okex
+
+***Older:***
+ 
+At `pyjuque/Exchanges`. 
+
+  - [Binance](/pyjuque/Exchanges/Binance.py) - based on the official [REST API](https://github.com/binance-exchange/binance-official-api-docs/blob/master/rest-api.md)
+
+### Indicators
+At `pyjuque/Indicators`. 
+
+Started implementing the Indicators module which currently contains some indicators from pyti. Undergoing integration with [pandas_ta](https://github.com/twopirllc/pandas-ta).
+
+The thinking is that this module should allow us to easily and quickly compute any of the hundreds of indicators out there and to use them in strategies & backtesting. Should seamlessly connect to the **Strategies** module.
 
 
 ### Strategy Optimiser 
@@ -112,34 +142,6 @@ print(ordb)
 
 ### Tests
 Run them with the command `nose2`
-
-## **In Progress**
-
-### Bot Controller
-At `pyjuque/Engine/BotController.py`. 
-
-A module which will handle the buying and selling of assets, given simple or more advanced rules, allowing us to run a strategy indefinitely. Checkout this [example](/examples/try_BotController.py).
-
-[In Progress], creating a universal bot controller `pyjuque/Engine/UniversalBotController.py` which uses for the exchange integration. 
-
-A module which will handle the buying and selling of assets, given simple or more advanced rules, allowing us to run a strategy indefinitely. Checkout this [example](/examples/TryUniversalBotController.py).
-
-##### Current Features:
-- Placing Entry (Buy) Orders on Signal 
-- Market, Limit & Stop Loss orders 
-- Placing Exit Order when Entry Order was fulfilled
-- Trading below/above signal by some %
-
-##### Future Features: 
-- OCO orders
-- Selling on signals
-- Trailing stop loss
-- Multiple trade entries (in case trade goes against you)
-
-### State persistence 
-
-Using SQLAlchemy.
-
 
 ## **Coming Soon**
 ### More Exchanges

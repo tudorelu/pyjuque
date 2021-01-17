@@ -1,4 +1,5 @@
 import os
+from os import getenv
 import sys
 import time
 import glob, importlib
@@ -9,40 +10,40 @@ sys.path.append(root_path)
 
 from pprint import pprint
 from yaspin import yaspin
-from pyjuque.Engine.Models import Base, TABot as Bot, Order, Pair, EntrySettings, ExitSettings, getSession
+from pyjuque.Engine.Models.BotModels import TABot as Bot, getSession
 from pyjuque.Engine.Database import InitializeDatabase
 from pyjuque.Engine.BotController import BotController
 from pyjuque.Engine.BotInitializer import getStrategies, getYamlConfig
-from pyjuque.Exchanges.Binance import Binance
+from pyjuque.Exchanges.CcxtExchange import CcxtExchange
+
 bot_name = 'bot1'
-# db = 'mysql+mysqlconnector://'+os.getenv('DB_USER') +':'\
-#     +os.getenv('DB_PASS')+'@'\
-#     +os.getenv('DB_HOST')+'/pyjuque'
-# session = getSession(db)
 
 def Main():
-    symbols = []
-    resetOrdersPairs = False
-    session = getSession()
-    exchange = Binance(get_credentials_from_env=True)
-    Strategies = getStrategies()
+    bot_config = getYamlConfig(bot_name)
     
+    db_url = None
+    if bot_config.__contains__('db_url'):
+        db_url = bot_config['db_url']
+    
+    session = getSession(db_url)
+    exchange = CcxtExchange('binance', {
+        'apiKey': getenv('BINANCE_API_KEY'), 
+        'secret': getenv('BINANCE_API_SECRET'),
+        'timeout': 30000,
+        'enableRateLimit': True,
+    })
+    Strategies = getStrategies()
+
     bot = session.query(Bot).filter_by(name=bot_name).first()
     if bot is None:
-        print('No bot found by name: ' + bot_name + '. Creating...')
-        if bot_config['symbols'] is None:
-            print('No symbols found in template. Adding all...')
-            for symbol in exchange.SYMBOL_DATAS.keys():
-                if exchange.SYMBOL_DATAS[symbol]["status"] == "TRADING" \
-                    and exchange.SYMBOL_DATAS[symbol]["quoteAsset"] == "BTC":
-                    symbols.append(symbol)
-        InitializeDatabase(session, symbols, bot_name=bot_name)
-        # Restart?
+        print('No bot found by name: {}. Creating...'.format(bot_name))
+        InitializeDatabase(session, bot_config)
         Main()
 
-    bot_config = getYamlConfig(bot_name)
-    if bot_config['symbols'] is not None:
-        symbols = bot_config['strategy']
+    symbols = []
+    if bot_config.__contains__('symbols') is not None:
+        symbols = bot_config['symbols']
+    
     strategy  = Strategies[bot_config['strategy']['name']](**bot_config['strategy']['params'])
     bot_controller = BotController(session, bot, exchange, strategy)
     sp = yaspin()
