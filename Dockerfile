@@ -4,7 +4,7 @@ RUN apk add make automake gcc g++ kmod kbd
 WORKDIR /usr/src/app
 VOLUME ["./db"]
 RUN python3 -m pip install yaspin
-COPY docker_requirements.txt ./
+COPY requirements.txt ./
 RUN python3 -m pip install --no-cache-dir -r requirements.txt
 COPY . .
 
