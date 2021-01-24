@@ -1,26 +1,19 @@
-import os
+from os.path import abspath, join, pardir
 import sys
-curr_path = os.path.abspath(__file__)
-root_path = os.path.abspath(
-    os.path.join(curr_path, os.path.pardir, os.path.pardir))
-sys.path.append(root_path)
+sys.path.append(abspath(join(abspath(__file__), pardir, pardir)))
 
 # Import all Created exchanges here
 from pyjuque.Exchanges.Binance import Binance
+from pyjuque.Exchanges.CcxtExchange import CcxtExchange
 from pandas import DataFrame
 
 from pyjuque.Strategies.BBRSIStrategy import BBRSIStrategy
 from pyjuque.Strategies.BBRSIStrategy import BBRSIStrategy
 from pyjuque.Engine.Backtester import backtest
 from pyjuque.Plotting.Plotter import PlotData
+from pyjuque.Utils import dotdict
 
 from pprint import pprint
-
-class dotdict(dict):
-    """dot.notation access to dictionary attributes"""
-    __getattr__ = dict.get
-    __setattr__ = dict.__setitem__
-    __delattr__ = dict.__delitem__
 
 entry_strategy:dotdict = dotdict(dict(
     strategy_class = BBRSIStrategy,
@@ -49,18 +42,18 @@ exit_settings:dotdict = dotdict(dict(
 
 def Main():
     # Initialize exchanges and test
-    binance = Binance()
+    exchange = CcxtExchange('binance')
     
     # symbol = "ZILBTC"
     # symbol = "XRPBTC"
     symbol = "BTCUSDT"
     interval = "1m"
-    df = binance.getOHLCV(symbol, interval, limit=1000)
+    df = exchange.getOHLCV(symbol, interval, limit=1000)
     
     strategy = entry_strategy.strategy_class(*entry_strategy.args)
     strategy.setUp(df)
     # pprint(strategy.df)
-    results = backtest(df, symbol, binance, entry_strategy, entry_settings, exit_settings)
+    results = backtest(df, symbol, exchange, entry_strategy, entry_settings, exit_settings)
 
     print("P\L: {}".format(results["total_profit_loss"]))
 

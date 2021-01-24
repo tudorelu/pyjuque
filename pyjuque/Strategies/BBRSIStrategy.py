@@ -15,19 +15,11 @@ class BBRSIStrategy(Strategy):
         bb_len = 100,
         rsi_ob = 50,
         rsi_os = 50):
-
-        print(self.minimum_period)
         self.rsi_ob = rsi_ob
         self.rsi_os = rsi_os
         self.bb_len = bb_len
         self.rsi_len = rsi_len
         self.minimum_period = max(100, bb_len, rsi_len)
-        # print("rsi_len {}, bb_len {}, rsi_ob {}, rsi_os {}".format(
-        #     rsi_len, bb_len, rsi_ob, rsi_os))
-        print(self.minimum_period)
-        self.chooseIndicators()
-
-    def chooseIndicators(self):
         self.indicators = (
             dict(indicator_name = 'rsi', col_name = 'rsi', 
                 source='close', period = self.rsi_len),
@@ -35,6 +27,7 @@ class BBRSIStrategy(Strategy):
                 source='close', period = self.bb_len),
             dict(indicator_name = 'ubb', col_name = 'ubb', 
                 source='close', period = self.bb_len))
+
 
     def checkLongSignal(self, i):
         df = self.df
@@ -60,6 +53,7 @@ class BBRSIStrategy(Strategy):
                 return True
 
         return False
+
 
     def checkShortSignal(self, i):
         df = self.df

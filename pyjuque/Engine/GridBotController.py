@@ -4,8 +4,8 @@ from yaspin import yaspin
 from pprint import pprint
 from decimal import Decimal
 from pyjuque.Exchanges.CcxtExchange import CcxtExchange
-from pyjuque.Engine.Models import Base, GridBotModel, getSession
-from pyjuque.Engine.UniversalOrderManager import *
+from pyjuque.Engine.Models import GridBotModel, getSession
+from pyjuque.Engine.OrderManager import *
 
 import logging
 logging.basicConfig(level=logging.INFO)
@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 class GridBotController:
 
     def __init__(self, name=None):
-        self.sp = False
+        self.status_printer = None
         self.screen = False
         if name == None:
             pass
@@ -60,20 +60,17 @@ class GridBotController:
         self.trade_step = trade_step
         self.total_trades = total_trades
         self.test_mode = test_mode
-
         self.name = 'GridBot_{}_{}_{}_{}_{}'.format(
             self.exchange_name, 
             symbol.replace('/', ''), 
             str(int(total_amount)), 
             str(int(trade_amount*total_amount)), 
             str(trade_step*100).replace('.', 'point'))
-
         if test_mode:
             self.name = self.name+'_test'
             raise NotImplementedError('Test Mode not implemented for GridBot')
         else:
             self.name = self.name+'_live'
-
         # print('Bot name is {}'.format(self.name))
         self.session = getSession('sqlite:///{}.db'.format(self.name))
 
@@ -100,38 +97,30 @@ class GridBotController:
         self.session.commit()
 
 
-    def tradingLoop(self):
-
-        ticker = self.exchange.exchange.fetchTicker(self.symbol)
+    def executeBot(self):
+        ticker = self.exchange.ccxt.fetchTicker(self.symbol)
         last_price = Decimal(ticker['last'])
         open_orders = self.bot.getOpenOrders(self.session)
-
         if len(open_orders) == 0:
             # Place Initial Buy Orders
-            self.sp.text = 'Palcing Initial Orders'
+            self.status_printer.text = 'Palcing Initial Orders'
             self.placeInitialOrders(last_price)
             open_orders = self.bot.getOpenOrders(self.session)
-        
         for order in open_orders:
-            self.sp.text = 'Checking Placed Orders'
+            self.status_printer.text = 'Checking Placed Orders'
             self.updateOpenOrder(order, last_price)
-        
         self.updateLastOrder(last_price)
-
         self.session.commit()
 
 
     def placeInitialOrders(self, last_price):
         for i in range(self.total_trades):
             buy_price = last_price - last_price * Decimal(i+1) * Decimal(self.trade_step)
-
             order = self.placeOrder(
                 symbol=self.symbol, side='buy', price=buy_price,  
                 quantity=self.trade_amount, order_type='limit', 
                 is_entry=True)
-            
             order.position_id = i
-
         self.session.commit()
 
 
@@ -148,13 +137,11 @@ class GridBotController:
         
         # print('Order Info:')
         # pprint(exchange_order_info)
-
         order.side = exchange_order_info['side']
         order.status = exchange_order_info['status']
         order.executed_quantity = exchange_order_info['filled']
         if exchange_order_info['fee'] != None:
             order.executed_quantity = exchange_order_info['filled'] + exchange_order_info['fee']['cost']
-
         if (order.side == 'buy'):
             # buy order was filled, place exit order.
             if (order.status == 'closed'):
@@ -164,7 +151,6 @@ class GridBotController:
                 self.toLog('Buy order at {} filled, place exit.'.format(order.price))
                 self.placeExitOrder(order)
                 self.placeFarthestEntryOrder(last_price)
-
             elif (order.status in ['canceled', 'expired', 'rejected']):
                 if order.executed_quantity > 0:
                     self.toLog('Buy order at {} canceled, but partially filled, place exit.'.format(order.price))
@@ -172,7 +158,6 @@ class GridBotController:
                     self.placeFarthestEntryOrder(last_price)
                 else:
                     order.is_closed = True
-
         # sell order 
         if (order.side == 'sell'):
             # sell order was filled
@@ -184,7 +169,6 @@ class GridBotController:
                 self.cancelFarthestEntryOrder(last_price)
                 self.placeEntryOrder(order)
                 order.is_closed = True
-
             # sell order was rejected by engine of exchange
             # if (order.status in ['rejected', 'expired', 'canceled']):
             #     original_buy_order = self.reviveOriginalBuyOrder(order)
@@ -216,10 +200,8 @@ class GridBotController:
 
     def updateLastOrder(self, last_price):
         open_orders = [order for order in self.bot.getOpenOrders(self.session) if order.side == 'buy']
-        
         if len(open_orders) == 0:
             return
-
         farthest_order = None
         closest_order = None
         max_difference = 0
@@ -229,17 +211,14 @@ class GridBotController:
             if difference > max_difference:
                 max_difference = difference
                 farthest_order = order
-            
             if difference < min_difference:
                 min_difference = difference
                 closest_order = order
-        
         if min_difference > last_price * Decimal(2 * self.trade_step):
             order_result = self.exchange.cancelOrder(
                 farthest_order.symbol, farthest_order.id, is_custom_id=True)
             farthest_order.status = 'canceled'
             farthest_order.is_closed = True
-            
             buy_price = closest_order.price * Decimal(1 + self.trade_step)
             self.placeOrder(
                 symbol = self.symbol,
@@ -254,7 +233,6 @@ class GridBotController:
         open_orders = [order for order in self.bot.getOpenOrders(self.session) if order.side == 'buy']
         if len(open_orders) == 0:
             return
-
         farthest_order = None
         max_difference = 0
         for order in open_orders:
@@ -262,16 +240,13 @@ class GridBotController:
             if difference > max_difference:
                 max_difference = difference
                 farthest_order = order
-        
         order_result = self.exchange.cancelOrder(farthest_order.symbol, farthest_order.id, is_custom_id=True)
         farthest_order.status = 'canceled'
         farthest_order.is_closed = True
 
 
     def placeFarthestEntryOrder(self, last_price):
-
         open_orders = [order for order in self.bot.getOpenOrders(self.session) if order.side == 'buy']
-        
         if len(open_orders) == 0:
             buy_price = last_price * Decimal(1 - self.trade_step)
             self.placeOrder(
@@ -282,7 +257,6 @@ class GridBotController:
                 order_type = 'limit',
                 is_entry=True)
             return
-
         farthest_order = None
         max_difference = 0
         for order in open_orders:
@@ -290,9 +264,7 @@ class GridBotController:
             if difference > max_difference:
                 max_difference = difference
                 farthest_order = order
-        
         buy_price = farthest_order.price * Decimal(1 - self.trade_step)
-
         self.placeOrder(
             symbol = self.symbol,
             price = buy_price, 
@@ -305,18 +277,15 @@ class GridBotController:
     def placeOrder(self, entry_order=None, **order_params):
         """ Create Order model and place order to exchange. """
         order_params['bot_id'] = self.bot.id
-
         new_order = placeNewOrder(
             exchange = self.exchange, 
             symbol = self.symbol, 
             order = entry_order, 
             test_mode = self.test_mode,
             order_params = order_params)
-        
         if new_order != None:
             self.syncModels(entry_order, new_order)
             self.session.add(new_order)
-
         return new_order
 
 
@@ -335,12 +304,12 @@ class GridBotController:
         # if self.screen:
         #     self.screen.clear()
         #     self.screen.refresh()
-        if self.sp:
-            self.sp.stop()
+        if self.status_printer != None:
+            self.status_printer.stop()
             if should_print:
                 logger.info(message)
             else:
-                self.sp.text = message
-            self.sp.start()
+                self.status_printer.text = message
+            self.status_printer.start()
         elif should_print:
             logger.info(message)

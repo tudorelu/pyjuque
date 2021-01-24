@@ -1,16 +1,18 @@
 bots:
   - 
     name: bot1
-    db_url: sqlite:///pyjuque_test_bot_1.db
-    sleep: 10
+    db_url: sqlite:///pyjuque_bot_1.db
+    sleep: 10                         # in seconds
     quote_asset: BTC
     starting_balance: 0.005
     test_run: False
-    initial_entry_allocation: 20
-    signal_distance: 0.3
-    profit_target: 2
-    stop_loss_value: 10
-    time_to_sleep: 30
+    entry_settings:
+      initial_entry_allocation: 20    # a % of starting_balance
+      signal_distance: 0.3            # in % below signal price
+    exit_settings:
+      profit_target: 2                # in % above entry price
+      stop_loss_value: 10             # in % below entry price
+      exit_on_signal: False
     strategy:
       name: BBRSIStrategy
       params:
@@ -18,7 +20,7 @@ bots:
         bb_len: 40
         rsi_ob: 70
         rsi_os: 30
-    symbols: # optionally empty
+    symbols:
       - ETH/BTC
       - ZIL/BTC
       - XLM/BTC

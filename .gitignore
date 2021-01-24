@@ -137,3 +137,5 @@ graphs/
 .DS_Store
 *.db
 !./db/
+
+private_examples/

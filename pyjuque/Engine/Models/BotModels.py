@@ -23,7 +23,7 @@ def getSession(path='sqlite:///', default_class=Base):
     return session
 
 
-class Order(Base):
+class OrderModel(Base):
     __tablename__ = 'order'
 
     id = db.Column(db.String(32), primary_key=True)
@@ -47,7 +47,7 @@ class Order(Base):
     last_checked_time = db.Column(db.Integer)
 
 
-class Pair(Base):
+class PairModel(Base):
     __tablename__ = 'pair'
 
     id = db.Column(db.Integer, primary_key=True)
@@ -58,7 +58,7 @@ class Pair(Base):
     profit_loss = db.Column(SqliteDecimal(13), default=1)
 
 
-class BaseBot(Base):
+class BaseBotModel(Base):
 
     __abstract__ = True
     __tablename__ = 'base_bot'
@@ -71,13 +71,13 @@ class BaseBot(Base):
     test_run = db.Column(db.Boolean, default=False)
 
     def getOrders(self, session):
-        return session.query(Order).filter_by(bot_id=self.id).all()
+        return session.query(OrderModel).filter_by(bot_id=self.id).all()
 
     def getOpenOrders(self, session):
-        return session.query(Order).filter_by(bot_id=self.id, is_closed=False).all()    
+        return session.query(OrderModel).filter_by(bot_id=self.id, is_closed=False).all()    
 
 
-class GridBotModel(BaseBot):
+class GridBotModel(BaseBotModel):
     __tablename__ = 'grid_bot'
    
     exchange = db.Column(db.String(30))
@@ -86,7 +86,7 @@ class GridBotModel(BaseBot):
     trade_step = db.Column(SqliteDecimal(13))
 
 
-class TABot(BaseBot):
+class TABotModel(BaseBotModel):
     __tablename__ = 'ta_bot'
 
     is_running = db.Column(db.Boolean, default=False)
@@ -95,19 +95,19 @@ class TABot(BaseBot):
     exit_settings_id = db.Column(db.Integer, db.ForeignKey('exit_settings.id'))
 
     def getPairs(self, session):
-        return session.query(Pair).filter_by(bot_id=self.id).all()
+        return session.query(PairModel).filter_by(bot_id=self.id).all()
 
     def getActivePairs(self, session):
-        return session.query(Pair).filter_by(bot_id=self.id, active=True).all()
+        return session.query(PairModel).filter_by(bot_id=self.id, active=True).all()
 
     def getPairWithSymbol(self, session, symbol):
-        return session.query(Pair).filter_by(bot_id=self.id, symbol=symbol).first()
+        return session.query(PairModel).filter_by(bot_id=self.id, symbol=symbol).first()
 
     def getFirstBuyOrder(self, session, position_id):
-        return session.query(Order).filter_by(bot_id=self.id, position_id=position_id, side='BUY').first()
+        return session.query(PairModel).filter_by(bot_id=self.id, position_id=position_id, side='BUY').first()
     
 
-class EntrySettings(Base):
+class EntrySettingsModel(Base):
     """
     Model for entry settings
     """
@@ -115,7 +115,7 @@ class EntrySettings(Base):
     __tablename__ = 'entry_settings'
     id = db.Column(db.Integer, primary_key=True)                  	# Unique ID
     name = db.Column(db.String(30))                                 # Name (for UI)
-    bots = relationship('TABot', backref=backref('entry_settings'))
+    bots = relationship('TABotModel', backref=backref('entry_settings'))
     open_buy_order_time_out = db.Column(db.Integer, default=math.inf)
     initial_entry_allocation = db.Column(db.Integer, default=None)	# What % of funds allocated to the bot will go to an initial entry
     subsequent_entries = db.Column(db.Integer, default=0)         	# Are there subsequent entries
@@ -128,12 +128,12 @@ class EntrySettings(Base):
                                         # from the signal price
 
 
-class ExitSettings(Base):
+class ExitSettingsModel(Base):
     """ Exit Settings of a Bot """
     __tablename__ = 'exit_settings'
     id = db.Column(db.Integer, primary_key=True)                  	# Unique ID
     name = db.Column(db.String(30))                               	# Name for UI
-    bots = relationship('TABot', backref=backref('exit_settings'))   # Name (for UI)
+    bots = relationship('TABotModel', backref=backref('exit_settings'))   # Name (for UI)
     profit_target = db.Column(db.Float)                           	# Exit when price is at value % profit from entry 
     stop_loss_value = db.Column(db.Float, default=None)             	# Whether to have stop loss or not (and what %)
     is_trailing_stop_loss = db.Column(db.Boolean, default=False)    	# Whether to have trailing stop loss or not (what %)

@@ -149,7 +149,7 @@ Binance Futures, Bitmex, Bitfinex, FTX, Bybit.
 Margin Trading, Market Making, Hyper Parameter Tuning.
 
 # Contributing
-To contribute simply fork the repo, write your desired feature in your own fork and make a pull request upon finishing. Please write tests!
+To contribute simply fork the repo, write your desired feature in your own fork and make a pull request upon finishing. Writing tests is also appreciated.
 
 ### Adding new Exchanges
 Each exchange should extend the BaseExchange class and implement all functions there. 

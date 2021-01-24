@@ -23,9 +23,6 @@ class MACDStrategy(Strategy):
         self.minimum_period = max(100, bb_len, rsi_len)
         # print("rsi_len {}, bb_len {}, rsi_ob {}, rsi_os {}".format(
         #     rsi_len, bb_len, rsi_ob, rsi_os))
-        self.chooseIndicators()
-
-    def chooseIndicators(self):
         self.indicators = (
             dict(indicator_name = 'rsi', col_name = 'rsi', 
                 source='close', period = self.rsi_len),

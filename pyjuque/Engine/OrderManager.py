@@ -7,7 +7,7 @@ from uuid import uuid4
 from sys import exc_info
 from pprint import pprint
 
-from pyjuque.Engine.Models import TABot as Bot, Pair, Order
+from pyjuque.Engine.Models import TABotModel as Bot, PairModel as Pair, OrderModel as Order
 
 
 def placeNewOrder(exchange, symbol, pair=None, order=None, test_mode=True, order_params=None):

@@ -21,9 +21,6 @@ class CustomIndicatorStrategy(Strategy):
         self.mfi_length = mfi_length 
         self.ob_level = ob_level
         self.os_level = os_level
-        self.chooseIndicators()
-
-    def chooseIndicators(self):
         self.indicators = [
             dict(
                 indicator_function  = rsx_momentum_exhaustion, 

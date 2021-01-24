@@ -71,18 +71,16 @@ def Main():
     strategy = AlwaysBuyStrategy() # BBRSIStrategy(13, 40, 70, 30)
     bot_controller = BotController(session, bot, exchange, strategy)
 
-    sp = yaspin()
-    bot_controller.sp = sp
-    bot_controller.sp_on = True
+    status_printer = yaspin()
+    bot_controller.status_printer = status_printer
     while True:
         try:
             bot_controller.executeBot()
         except KeyboardInterrupt:
             return
-        bot_controller.sp.start()
         left_to_sleep = time_to_sleep
         while left_to_sleep > 0:
-            bot_controller.sp.text = "Waiting for {} more seconds...".format(left_to_sleep)
+            bot_controller.status_printer.text = "Waiting for {} more seconds...".format(left_to_sleep)
             time.sleep(1)
             left_to_sleep -= 1
 

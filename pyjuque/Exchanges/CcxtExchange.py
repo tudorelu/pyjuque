@@ -12,7 +12,7 @@ class CcxtExchange():
     def __init__(self, exchange_id, params):
         self.exchange_id = exchange_id # 'binance'
         self.exchange_class = getattr(ccxt, exchange_id)
-        self.exchange = self.exchange_class(params)
+        self.ccxt = self.exchange_class(params)
         # params = {
         #     'apiKey': 'YOUR_API_KEY',
         #     'secret': 'YOUR_SECRET',
@@ -23,7 +23,7 @@ class CcxtExchange():
 
     def getOHLCV(self, symbol, interval, limit=1000, start_time=None, cast_to=float):
         """ Converts cctx ohlcv data from list of lists to dataframe. """
-        ohlcv = self.exchange.fetchOHLCV(
+        ohlcv = self.ccxt.fetchOHLCV(
             symbol, interval, since=start_time, limit=limit)
         if len(ohlcv) == 0:
             return pd.DataFrame()
@@ -49,7 +49,7 @@ class CcxtExchange():
                 '{} doesn\'t provide access to this data.'.format(
                     self.exchange_id))
 
-        time_diff = self.exchange.parse_timeframe(interval) * 1000
+        time_diff = self.ccxt.parse_timeframe(interval) * 1000
         last_time = df['time'][len(df) - 1]
 
         # print(last_time)
@@ -68,7 +68,7 @@ class CcxtExchange():
         Places order on exchange given a dictionary of parameters.
         """
 
-        return self.exchange.createOrder(symbol, params)
+        return self.ccxt.createOrder(symbol, params)
 
 
     def placeMarketOrder(self, symbol, side, amount, test=False, custom_id=False):
@@ -80,7 +80,7 @@ class CcxtExchange():
         if custom_id:
             args['clientOrderId'] = custom_id
 
-        order = self.exchange.createOrder(
+        order = self.ccxt.createOrder(
             symbol=symbol, type='market', side=side, 
             amount=amount, price=None, params=args)
         
@@ -97,7 +97,7 @@ class CcxtExchange():
         if custom_id:
             args['clientOrderId'] = custom_id
 
-        order = self.exchange.createOrder(
+        order = self.ccxt.createOrder(
             symbol=symbol, type='limit', side=side, 
             amount=amount, price=price, params=args)
         
@@ -117,7 +117,7 @@ class CcxtExchange():
         if self.exchange_id == 'binance':
             args['stopPrice'] = price
 
-            data = self.exchange.createOrder(
+            data = self.ccxt.createOrder(
                 symbol=symbol, 
                 type='stop_loss_limit', 
                 side=side, 
@@ -139,7 +139,7 @@ class CcxtExchange():
                 'algo_type':'2'
                 }
 
-            data = self.exchange.spotPostOrderAlgo(args)
+            data = self.ccxt.spotPostOrderAlgo(args)
             ret = data
             ret['id'] = data['algo_id']
         else:
@@ -157,7 +157,7 @@ class CcxtExchange():
         if is_custom_id:
             params['clientOrderId'] = order_id
 
-        return self.exchange.cancelOrder(order_id, symbol, params)
+        return self.ccxt.cancelOrder(order_id, symbol, params)
 
 
     def cancelAlgoOrder(self, symbol, order_id, order_type='1', is_custom_id=False):
@@ -167,10 +167,10 @@ class CcxtExchange():
             params['clientOrderId'] = order_id
 
         if self.exchange_id == 'binance':
-            order = self.exchange.cancelOrder(order_id, symbol, params)
+            order = self.ccxt.cancelOrder(order_id, symbol, params)
 
         elif self.exchange_id == 'okex':
-            data = self.exchange.spotPostCancelBatchAlgos(
+            data = self.ccxt.spotPostCancelBatchAlgos(
                 {
                     'instrument_id':'ETH-BTC', 
                     'algo_ids':[order_id], 
@@ -193,7 +193,7 @@ class CcxtExchange():
         if is_custom_id:
             params['clientOrderId'] = order_id
 
-        return self.exchange.fetchOrder(order_id, symbol, params)
+        return self.ccxt.fetchOrder(order_id, symbol, params)
     
 
     def getAlgoOrder(self, symbol, order_id, order_type='1', is_custom_id=False):
@@ -206,10 +206,10 @@ class CcxtExchange():
             params['clientOrderId'] = order_id
 
         if self.exchange_id == 'binance':
-            order = self.exchange.fetchOrder(order_id, symbol, params)
+            order = self.ccxt.fetchOrder(order_id, symbol, params)
 
         elif self.exchange_id == 'okex':
-            data = self.exchange.spotGetAlgo(
+            data = self.ccxt.spotGetAlgo(
                 {
                     'instrument_id' : symbol.replace('/', '-'), 
                     'order_type' : order_type, 

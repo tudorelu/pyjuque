@@ -13,29 +13,23 @@ class Strategy(ABC):
 
     def setUp(self, df):
         self.df = df
-
         if self.indicators is not None:
             # Create all asked indicators
             for indicator in self.indicators:
                 exclude_keys = set(['indicator_name', 'col_name', 'indicator_function'])
                 args = [indicator[k] 
-                    for k in indicator.keys() if k not in exclude_keys]
-                
+                    for k in indicator.keys() if k not in exclude_keys]                
                 # print("For {} we have args {}".format(indicator["indicator_name"], args))
-
                 if 'indicator_function' in indicator.keys():
                     col_name = indicator['col_name']
                     indicator_function = indicator['indicator_function']
                     ret = indicator_function(self.df, *args)
-                    
                     cols_dict = dict()
                     i = 0
                     for cname in col_name:
                         cols_dict[cname] = ret[i]
                         i += 1
-
                     self.df = self.df.assign(**cols_dict) 
-
                 else:
                     # Create a list of all arguments that are not the 
                     # indicator name or column name
@@ -46,25 +40,24 @@ class Strategy(ABC):
                         *args)
         return self.df
 
-    @abstractmethod
-    def chooseIndicators(self):
-        """ Checks whether we have a long signal """
-        pass
 
     @abstractmethod
     def checkLongSignal(self, i):
         """ Checks whether we have a long signal """
         pass
 
+
     @abstractmethod
     def checkShortSignal(self, i):
         """ Checks whether we have a short signal """
         pass
 
+
     def checkToExitLongPosition(self, i):
         """ Checks whether we should exit a long position
         (By default this is equivalent to checkShortSignal) """
         return self.checkShortSignal(i)
+
 
     def checkToExitShortPosition(self, i):
         """ Checks whether we should exit a short position

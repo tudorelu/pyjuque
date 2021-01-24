@@ -20,7 +20,6 @@ def getSession(path='sqlite:///', default_class=Base):
     session = Session()
     return session
 
-Base = declarative_base()
 
 class CandlestickModel(Base):
     __tablename__ = 'candlestick'

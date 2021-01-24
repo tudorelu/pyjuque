@@ -7,13 +7,10 @@ class EMAXStrategy(Strategy):
         self.minimum_period = 100
         self.fast_period = fast_period
         self.slow_period = slow_period
-        self.chooseIndicators()
-
-    def chooseIndicators(self):
         self.indicators = [
-					dict(indicator_name  = 'sma', col_name = 'sma_fast', source='close', period = self.fast_period), 
-					dict(indicator_name = 'sma', col_name = 'sma_slow', source='close', period = self.slow_period)
-				]
+            dict(indicator_name  = 'sma', col_name = 'sma_fast', source='close', period = self.fast_period), 
+            dict(indicator_name = 'sma', col_name = 'sma_slow', source='close', period = self.slow_period)
+        ]
 
     def checkLongSignal(self, i):
         df = self.df

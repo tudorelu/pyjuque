@@ -107,7 +107,7 @@ def populateScreen(bot, open_orders, buy_orders, sell_orders):
         k += 1
     
     bot.screen.refresh()
-    # bot.sp.start()
+    # bot.status_printer.start()
 
 
 if __name__ == '__main__':
@@ -127,10 +127,10 @@ if __name__ == '__main__':
     total_trades = 1            
 
     time_to_sleep = 10
-    sp = yaspin()
+    status_printer = yaspin()
     screen = curses.initscr()
     bot = GridBotController() #('GridBot_OKEX_LTCUSDT_300_15_0point5_live')
-    bot.sp = sp
+    bot.status_printer = status_printer
     bot.screen = screen
     bot.create(okex, symbol, total_amount, trade_amount, trade_step, total_trades)
     curses.start_color()
@@ -139,18 +139,16 @@ if __name__ == '__main__':
     curses.init_pair(3, curses.COLOR_RED, curses.COLOR_BLACK)
 
     while True:
-        bot.sp.stop()
+        bot.status_printer.stop()
 
         open_orders = bot.bot.getOpenOrders(bot.session)
         buy_orders = [order for order in open_orders if order.side == 'buy']
         sell_orders = [order for order in open_orders if order.side == 'sell']
 
         populateScreen(bot, open_orders, buy_orders, sell_orders)
-
-        bot.sp.start()
         
         try:
-            bot.tradingLoop()
+            bot.executeBot()
         except KeyboardInterrupt:
             bot.screen.clear()
             bot.screen.refresh()
@@ -166,7 +164,7 @@ if __name__ == '__main__':
         left_to_sleep = time_to_sleep
         
         while left_to_sleep > 0:
-            bot.sp.text = '{} bot has {} open orders | {} buy {} sell | {} more seconds...'.format(
+            bot.status_printer.text = '{} bot has {} open orders | {} buy {} sell | {} more seconds...'.format(
                 bot.symbol, len(open_orders), len(buy_orders), len(sell_orders), left_to_sleep)
             time.sleep(1)
             left_to_sleep -= 1

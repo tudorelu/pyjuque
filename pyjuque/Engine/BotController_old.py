@@ -18,29 +18,25 @@ import sys
 
 class BotController:
 
-    def __init__(self, session, bot, exchange, strategy, sp = None, sp_on = False, logger_on = False):
+    def __init__(self, session, bot, exchange, strategy, status_printer = None, logger_on = False):
         self.bot = bot
         self.session = session
         self.exchange = exchange
         self.strategy = strategy
         self.test_mode = bot.test_run
         self.kline_interval = '5m'
-        self.sp = sp
-        self.sp_on = sp_on
+        self.status_printer = status_printer
         self.logger_on = logger_on
 
     def executeBot(self):
         """ The main execution loop of the bot """
-
+        if self.status_printer != None:
+            self.status_printer.start()
         # Step 1: Retreive all pairs for a particular bot
-
         self.logOrSp("Getting active pairs:")
-
         active_pairs = self.bot.getActivePairs(self.session)
-        
         self.logOrSp("Number of active_pairs: {}".format(
                 len(active_pairs)))
-
         # Step 2 For Each Pair:
         #		Retreive current market data
         # 	Compute Indicators & Check if Strategy is Fulfilled
@@ -404,12 +400,12 @@ class BotController:
         return exit_quantity
 
     def logOrSp(self, message, should_print=False, force=False):
-        if self.sp_on and self.sp != None:
-            self.sp.stop()
+        if self.status_printer != None:
+            self.status_printer.stop()
             if should_print:
               logger.info(message)
             else:
-                self.sp.text = message
-            self.sp.start()
+                self.status_printer.text = message
+            self.status_printer.start()
         elif self.logger_on or force:
             logger.info(message)
