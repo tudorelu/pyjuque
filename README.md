@@ -83,13 +83,6 @@ At `pyjuque/Exchanges`.
 
   - [Binance](/pyjuque/Exchanges/Binance.py) - based on the official [REST API](https://github.com/binance-exchange/binance-official-api-docs/blob/master/rest-api.md)
 
-### Indicators
-At `pyjuque/Indicators`. 
-
-Started implementing the Indicators module which currently contains some indicators from pyti. Undergoing integration with [pandas_ta](https://github.com/twopirllc/pandas-ta).
-
-The thinking is that this module should allow us to easily and quickly compute any of the hundreds of indicators out there and to use them in strategies & backtesting. Should seamlessly connect to the **Strategies** module.
-
 
 ### Strategy Optimiser 
 At `pyjuque/Strategies/StrategyOptimiser.py`. 

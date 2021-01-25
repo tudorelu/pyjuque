@@ -4,8 +4,7 @@ Description:
   WebSocket connection to Binance
 
 """
-import os
-import sys
+from os import getenv
 import time
 import json 
 import datetime
@@ -15,12 +14,18 @@ from pprint import pprint
 from decimal import Decimal, Context
 
 from pyjuque.Exchanges.Binance import Binance
+from pyjuque.Exchanges.CcxtExchange import CcxtExchange
 
 ############## GLOBAL VARIABLES ##############
 
 ws = None                             # Websocket Object
-exchange = Binance(
-  get_credentials_from_env=True)      # The exchange
+exchange = CcxtExchange('binance', {
+    'apiKey': getenv('BINANCE_API_KEY'), 
+    'secret': getenv('BINANCE_API_SECRET'),
+    'timeout': 30000,
+    'enableRateLimit': True,
+})      
+# The exchange
 order_book = dict(counter = 0)        # The (per-symbol) order book
 order_book_lock = threading.Lock()    # Order book threading lock
 order_book_initialized = dict()       # Whether the (per-symbol) local 
@@ -43,7 +48,7 @@ def onError(ws, error):
 
 def onMessage(ws, message):
   json_message = json.loads(message)
-#   pprint(json_message) 
+  pprint(json_message['data']['s'])
   symbol = json_message['data']['s']
   global order_book_initialized
   if not order_book_initialized[symbol]:
@@ -200,6 +205,8 @@ class CreateOrderBookThread(threading.Thread):
     time.sleep(2)
     for symbol in self.symbols:
       ob = self.exchange.getOrderBook(symbol, 50)
+    #   print('OB IS')
+    #   pprint(order_book)
       order_book[symbol] = dict(
         lastUpdateId=ob['lastUpdateId'], 
         bids=ob['bids'], 
@@ -241,9 +248,9 @@ class OrderBook():
 
     streams = []
     if self.msUpdate:
-      streams = [ symbol.lower()+"@depth@100ms" for symbol in self.symbols ]
+      streams = [ symbol.replace('/', '').lower()+"@depth@100ms" for symbol in self.symbols ]
     else:
-      streams = [ symbol.lower()+"@depth" for symbol in self.symbols ]
+      streams = [ symbol.replace('/', '').lower()+"@depth" for symbol in self.symbols ]
     
     socket_url = "wss://stream.binance.com:9443/stream?streams=" + \
       '/'.join(streams)
@@ -280,7 +287,7 @@ class OrderBook():
         "method": "SUBSCRIBE",
         "params":
         [
-            "{}@depth{}".format(symbol.lower(), speed)
+            "{}@depth{}".format(symbol.replace('/', '').lower(), speed)
         ],
         "id": 1
     }
@@ -298,14 +305,13 @@ class OrderBook():
   def unsubscribeFromSymbol(self, symbol):
     global ws
 
-    symbol = symbol.lower()
     speed = "100ms" if self.msUpdate else ""
     
     msg = {
         "method": "UNSUBSCRIBE",
         "params":
         [
-            "{}@depth{}".format(symbol, speed)
+            "{}@depth{}".format(symbol.replace('/', '').lower(), speed)
         ],
         "id": 2
     }
@@ -320,7 +326,7 @@ class OrderBook():
     initial_quantity = quantity
     symbol_order_book = order_book[symbol]
     order_book_side = symbol_order_book['asks'] \
-      if side == exchange.ORDER_SIDE_BUY else symbol_order_book['bids']
+      if side == 'buy' else symbol_order_book['bids']
 
     i, orders, price = 0, [], Decimal('0')
     accounted_for_quantity = Decimal('0')

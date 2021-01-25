@@ -3,6 +3,8 @@ import pandas as pd
 from pprint import pprint
 from decimal import Decimal
 from datetime import datetime
+import requests 
+import json
 
 class FetchHistoricalDataException(Exception):
     pass
@@ -192,7 +194,6 @@ class CcxtExchange():
         params = {}
         if is_custom_id:
             params['clientOrderId'] = order_id
-
         return self.ccxt.fetchOrder(order_id, symbol, params)
     
 
@@ -229,13 +230,11 @@ class CcxtExchange():
         """ 
         Updates an order based on it's state on the exchange given by 
         order_response. Should be part of the exchange interface  """
-
         # print("Order response is")
         # pprint(order_response)
         if order.is_test:
             if order.side == 'buy':
                 order.entry_price = order.price
-
         if not order.is_test:
             if order_response['timestamp'] is not None:
                 order.timestamp = datetime.fromtimestamp(
@@ -254,5 +253,16 @@ class CcxtExchange():
                 order.order_type = order_response['type']
             if order.side == 'buy':
                 order.entry_price = order_response['price']
-
         return order
+
+
+    def getOrderBook(self, symbol, limit):
+        if self.exchange_id == 'binance':
+            url = 'https://api.binance.com' + '/api/v3/depth' \
+                + "?&symbol=" + str(symbol.replace('/', '')) + "&limit=" + str(limit)
+            response = requests.get(url)
+            payload = json.loads(response.text)
+            return payload
+        else: 
+            raise NotImplementedError
+            

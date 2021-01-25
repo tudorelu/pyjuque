@@ -1,27 +1,19 @@
 import time
 import math
-
-from traceback import print_exc
-
 from uuid import uuid4
 from sys import exc_info
 from pprint import pprint
-
+from traceback import print_exc
 from pyjuque.Engine.Models import TABotModel as Bot, PairModel as Pair, OrderModel as Order
 
 
 def placeNewOrder(exchange, symbol, pair=None, order=None, test_mode=True, order_params=None):
     """ Create Order model and place order to exchange. """
-
-    # print("2: Order params are")
-    # pprint(order_params)
     new_order_model = createOrderModel(symbol, test_mode, order_params, order)
-
     if not test_mode:
         new_order_response = placeOrderFromOrderModel(exchange, new_order_model)
     else:
         new_order_response = dict(message='success')
-    
     exchange.updateSQLOrderModel(new_order_model, new_order_response, None)
     return new_order_model
 
