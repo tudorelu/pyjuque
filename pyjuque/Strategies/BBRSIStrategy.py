@@ -1,4 +1,3 @@
-from pyjuque.Indicators import AddIndicator # pylint: disable=E0401
 from pyjuque.Strategies.BaseStrategy import Strategy
 
 class BBRSIStrategy(Strategy):

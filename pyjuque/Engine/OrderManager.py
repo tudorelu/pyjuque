@@ -83,8 +83,7 @@ def simulateOrderInfo(exchange, order, kline_interval):
     time_diff = new_last_checked_time - order.last_checked_time
     interval_in_ms = klineIntervalToMs(kline_interval)
     if  time_diff < interval_in_ms:
-        candlestick_data = exchange.getOHLCV(
-            order.symbol, kline_interval, 1)
+        candlestick_data = exchange.getOHLCV(order.symbol, kline_interval, 1)
     else:
         minimum_period = int(math.ceil(time_diff / interval_in_ms))
         candlestick_data = exchange.getOHLCV(order.symbol, kline_interval, 

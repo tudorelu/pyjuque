@@ -1,21 +1,15 @@
 # app/tests/test_basic.py
-
-import os
+# import os
 import unittest
-
-import sys
-curr_path = os.path.abspath(__file__)
-root_path = os.path.abspath(
-	os.path.join(curr_path, os.path.pardir, os.path.pardir))
-sys.path.append(root_path)
+# import sys
+# curr_path = os.path.abspath(__file__)
+# root_path = os.path.abspath(
+# 	os.path.join(curr_path, os.path.pardir, os.path.pardir))
+# sys.path.append(root_path)
 # Import all Created exchanges here
-from pyjuque.Exchanges.Binance import Binance
 from pyjuque.Indicators import AddIndicator, INDICATOR_DICT
 from tests.utils import timeit
-from pandas import DataFrame
-
 import pandas
-
 import json
 
 class PytiIndicatorsTests(unittest.TestCase):

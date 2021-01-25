@@ -59,19 +59,14 @@ class BotController:
 
 
     def checkEntryStrategy(self, symbol):
-        """
-        Default function that sets up the strategy. 
+        """ Default function that checks up the entry strategy. 
         Can be overridden for custom strategies.
         """
         try:
-            df = self.exchange.getOHLCV(
-                symbol, 
-                self.kline_interval, 
-                limit = self.strategy.minimum_period)
+            df = self.exchange.getOHLCV(symbol, self.kline_interval, self.strategy.minimum_period)
         except Exception as e:
-            self.logOrShow('Error getting data from the '
-                'exchange for {}:'.format(symbol))
-            self.logOrShow(sys.exc_info())
+            self.logOrShow('Error getting data from the exchange for {}:'.format(symbol))
+            self.logOrShow(sys.exc_info()[2])
             return False, None
         self.strategy.setUp(df)
         entry_signal = self.strategy.checkLongSignal(len(df) - 1)
@@ -84,13 +79,12 @@ class BotController:
         Gets the latest market data and runs the strategy off of it. 
         If strategy returns entry signal, entry is made.
         """
-        bot = self.bot
         entry_signal, last_price = self.checkEntryStrategy(pair.symbol)
         if entry_signal:
             side = 'buy'
-            quote_qty = Decimal(bot.starting_balance) \
-                * Decimal(bot.entry_settings.initial_entry_allocation) / 100
-            if bot.entry_settings.signal_distance == 0:
+            quote_qty = Decimal(self.bot.starting_balance) \
+                * Decimal(self.bot.entry_settings.initial_entry_allocation) / 100
+            if self.bot.entry_settings.signal_distance == 0:
                 desired_price = Decimal(last_price)
                 quantity = quote_qty / desired_price
                 self.placeOrder(
@@ -102,7 +96,7 @@ class BotController:
                     is_entry=True)
             else:
                 desired_price = Decimal(last_price) \
-                    * Decimal((100 - bot.entry_settings.signal_distance) / 100 )
+                    * Decimal((100 - self.bot.entry_settings.signal_distance) / 100 )
                 quantity = quote_qty / desired_price
                 self.placeOrder(
                     symbol=pair.symbol, 
@@ -119,25 +113,24 @@ class BotController:
         """
         Checks the status of an open order and updates it
         """
-        exchange = self.exchange
-        pair:Pair = self.bot.getPairWithSymbol(self.session, order.symbol)
+        pair = self.bot.getPairWithSymbol(self.session, order.symbol)
         self.logOrShow('Checking open order on {}.'.format(order.symbol), should_print=False)
         # get info of order from exchange
         if not self.test_mode: 
             try:
-                exchange_order_info = exchange.getOrder(
+                exchange_order_info = self.exchange.getOrder(
                     order.symbol, order.id, is_custom_id=True)
             except Exception as e:
                 self.logOrShow('Error getting data from the exchange for'
                 ' updating open order on {}.'.format(order.symbol))
-                self.logOrShow(sys.exc_info())
+                self.logOrShow(sys.exc_info()[2])
                 return
         else:
             try:
-                exchange_order_info = simulateOrderInfo(exchange, order, self.kline_interval)
+                exchange_order_info = simulateOrderInfo(self.exchange, order, self.kline_interval)
             except Exception as e:
                 self.logOrShow('Error simulating open order on {}.'.format(order.symbol))
-                self.logOrShow(sys.exc_info())
+                self.logOrShow(sys.exc_info()[2])
                 return
         # update order params.
         order.side = exchange_order_info['side']
@@ -152,7 +145,7 @@ class BotController:
                     self.processClosedPosition(order, pair)
             # buy order was filled, place exit order.
             if (order.status == 'closed'):
-                self.logOrShow('BUY order on {} filled, try exit.'.format(pair.symbol))
+                self.logOrShow('BUY order on {} filled, try exit.'.format(order.symbol))
                 self.tryExitOrder(order, pair)
             # buy order has been accepted by engine
             if (order.status == 'open'):
@@ -225,17 +218,15 @@ class BotController:
         For now only supports placing stop loss market order when 
         position goes against us (basically simple oco order variant)
         """
-        exchange = self.exchange
-        bot = self.bot
         try:
-            candlestick_data = exchange.getOHLCV(order.symbol, self.kline_interval)
+            candlestick_data = self.exchange.getOHLCV(order.symbol, self.kline_interval)
         except Exception:
-            self.logOrShow('Error getting data from the exchange \
-                for updating open sell order on {}:'.format(pair.symbol))
-            self.logOrShow(sys.exc_info())
+            self.logOrShow('Error getting data from the exchange '
+                'for updating open sell order on {}:'.format(pair.symbol))
+            self.logOrShow(sys.exc_info()[2])
             return
         current_price = candlestick_data.iloc[-1]['close']
-        stop_loss_value = bot.exit_settings.stop_loss_value
+        stop_loss_value = self.bot.exit_settings.stop_loss_value
         if stop_loss_value is not None:
             if (Decimal(100 - stop_loss_value) / Decimal(100)) \
                 * Decimal(order.entry_price) >= Decimal(current_price):
@@ -244,7 +235,7 @@ class BotController:
                 order_type = 'market'
                 if not self.test_mode:
                     try:
-                        order_result = cancelOrder(exchange, order)
+                        order_result = cancelOrder(self.exchange, order)
                     except Exception as e:
                         self.logOrShow('cancelOrder() failed')
                         self.logOrShow(e)
@@ -263,15 +254,13 @@ class BotController:
 
 
     def checkExitStrategy(self, symbol):
-        """
-        Default function that sets up the exit strategy. 
-        Can be overridden for custom strategies.
+        """  Default function that checks the exit strategy. 
+        Can be overwritten for custom strategies.
         """
         try:
-            df = exchange.getOHLCV(symbol, self.kline_interval, self.strategy.minimum_period)
+            df = self.exchange.getOHLCV(symbol, self.kline_interval, self.strategy.minimum_period)
         except Exception:
-            self.logOrShow('Error getting data from the exchange for'
-                ' exiting order on {}:'.format(symbol))
+            self.logOrShow('Error getting data from the exchange for {}:'.format(symbol))
             self.logOrShow(sys.exc_info()[2])
             return False, None
         self.strategy.setUp(df)
@@ -282,16 +271,13 @@ class BotController:
 
     def tryExitOrder(self, order, pair):
         """ If strategy returns exit signal look to place exit order. """
-        bot = self.bot
-        symbol = order.symbol
-        exchange = self.exchange
-        exit_signal, last_price = self.checkExitStrategy(symbol)
-        if bot.exit_settings.exit_on_signal and exit_signal:
+        exit_signal, last_price = self.checkExitStrategy(order.symbol)
+        if self.bot.exit_settings.exit_on_signal and exit_signal:
             quantity = self.computeMatchingOrderQuantity(order)
             order_type = 'market'
             side = 'sell'
             self.placeOrder(
-                symbol, pair,
+                order.symbol, pair,
                 order = order,
                 quantity = quantity,
                 side = side,
@@ -299,21 +285,21 @@ class BotController:
         else:
             # Calculates quantity of order. 
             # Takes in to account partially filled orders.
-            stop_loss_value = bot.exit_settings.stop_loss_value 
-            profit_target = bot.exit_settings.profit_target
+            stop_loss_value = self.bot.exit_settings.stop_loss_value 
+            profit_target = self.bot.exit_settings.profit_target
             quantity = self.computeMatchingOrderQuantity(order)
             if profit_target is not None:
                 price = (Decimal(100 + profit_target) \
-                    / Decimal(100)) * Decimal(current_price)
+                    / Decimal(100)) * Decimal(last_price)
                 order_type = 'limit'
                 side = 'sell'
             elif stop_loss_value is not None:
                 price = (Decimal(100 - stop_loss_value) \
-                    / Decimal(100)) * Decimal(current_price)
+                    / Decimal(100)) * Decimal(last_price)
                 order_type = 'stop_loss'
                 side = 'sell'
             self.placeOrder(
-                symbol=symbol, pair=pair, 
+                symbol=order.symbol, pair=pair, 
                 order=order, price=price, 
                 quantity=quantity, side=side, 
                 order_type=order_type)

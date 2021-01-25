@@ -1,17 +1,13 @@
 import os 
 import sys
-
 curr_path = os.path.abspath(__file__)
 root_path = os.path.abspath(
 	os.path.join(curr_path, os.path.pardir, os.path.pardir))
 sys.path.insert(1, root_path)
-
 from pyjuque.Engine import Models # pylint: disable=E0401
-from tests.helper_functions import get_session # pylint: disable=E0401
-
+from tests.utils import get_session # pylint: disable=E0401
 import unittest
 from unittest.mock import patch
-
 from sqlalchemy.ext.declarative import declarative_base
 import sqlalchemy as db
 

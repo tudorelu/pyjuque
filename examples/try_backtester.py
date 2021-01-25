@@ -8,7 +8,6 @@ from pyjuque.Exchanges.CcxtExchange import CcxtExchange
 from pandas import DataFrame
 
 from pyjuque.Strategies.BBRSIStrategy import BBRSIStrategy
-from pyjuque.Strategies.BBRSIStrategy import BBRSIStrategy
 from pyjuque.Engine.Backtester import backtest
 from pyjuque.Plotting.Plotter import PlotData
 from pyjuque.Utils import dotdict

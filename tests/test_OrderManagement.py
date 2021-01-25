@@ -1,7 +1,6 @@
 # app/tests/test_order_management.py
 import os
 import sys
-
 curr_path = os.path.abspath(__file__)
 root_path = os.path.abspath(
     os.path.join(curr_path, os.path.pardir, os.path.pardir))
@@ -11,25 +10,22 @@ sys.path.insert(1, root_path)
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from alchemy_mock.mocking import AlchemyMagicMock
-
 # Testing Tools
 import unittest
 from mock import Mock
-from tests.utils import timeit
-from tests.helper_functions import get_session
+from tests.utils import timeit, get_session
 from unittest.mock import patch
 from freezegun import freeze_time
 from copy import deepcopy
-
 # Other Tools
 import json
 import pandas as pd
 import datetime as dt
-
 # Pyjuque Modules
 from pyjuque.Exchanges.Binance import Binance 
 from pyjuque.Strategies.EMAXStrategy import EMAXStrategy 
-from pyjuque.Engine import backtest, BotController, Order, Pair, TABot as Bot, EntrySettings, ExitSettings
+from pyjuque.Engine import backtest, BotController, OrderModel as Order, PairModel as Pair, \
+    TABotModel as Bot, EntrySettingsModel as EntrySettings, ExitSettingsModel as ExitSettings
 from pyjuque.Plotting.Plotter import PlotData 
 
 class OrderManagementTests(unittest.TestCase):
@@ -39,7 +35,6 @@ class OrderManagementTests(unittest.TestCase):
 
     # executed prior to each test
     def setUp(self):	
-
         self.exchange = Binance()
         self.df_BTCUSD_1k = pd.read_csv('./tests/data/BTCUSD_1m_1k.csv')
         self.df_BTCUSD_10k = pd.read_csv('./tests/data/BTCUSD_1m_10k.csv')
@@ -74,7 +69,6 @@ class OrderManagementTests(unittest.TestCase):
         self.is_closed = True
         self.side = 'BUY'
         self.is_test = True
-
         self.session = get_session()
         self.assertEqual(len(self.session.query(Bot).all()), 0)
 
@@ -173,9 +167,7 @@ class OrderManagementTests(unittest.TestCase):
     @patch('pyjuque.Engine.BotController.tryExitOrder')
     def test_execute_bot(self, mock_try_exit_order, mock_try_entry_order):
         """ Test execute bot method in OrderManagement"""
-        
         self.om.executeBot()
-
         self.assertEqual(mock_try_entry_order.call_count, 2)
         self.assertEqual(mock_try_exit_order.call_count, 1)
 
