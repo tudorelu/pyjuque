@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 class GridBotController:
 
-    def __init__(self, name=None):
+    def __init__(self, name = None):
         self.status_printer = None
         self.screen = False
         if name == None:
@@ -24,24 +24,24 @@ class GridBotController:
             #     'with the required parameters')
         else:
             session = getSession('sqlite:///{}.db'.format(name))
-            bot = session.query(GridBotModel).first()
-            if bot == None:
+            bot_model = session.query(GridBotModel).first()
+            if bot_model == None:
                 pass
                 # print('GridBot is nonexistent, '
                 #     'please call self.create() '
                 #     'with the required parameters')
             else:
                 # print('GridBot found!')
-                self.bot = bot
+                self.bot_model = bot_model
                 self.name = name
                 self.session = session
-                self.symbol = bot.symbol
-                self.total_amount = bot.starting_balance
-                self.trade_amount = bot.trade_amount
-                self.trade_step = bot.trade_step
-                self.test_mode = bot.test_run
-                self.exchange_name = bot.exchange.upper()
-                self.exchange = CcxtExchange(bot.exchange.lower(), {
+                self.symbol = bot_model.symbol
+                self.total_amount = bot_model.starting_balance
+                self.trade_amount = bot_model.trade_amount
+                self.trade_step = bot_model.trade_step
+                self.test_mode = bot_model.test_run
+                self.exchange_name = bot_model.exchange.upper()
+                self.exchange = CcxtExchange(bot_model.exchange.lower(), {
                     'apiKey': getenv('{}_API_KEY'.format(self.exchange_name)), 
                     'secret': getenv('{}_API_SECRET'.format(self.exchange_name)),
                     'password': getenv('{}_PASSWORD'.format(self.exchange_name)),
@@ -74,17 +74,17 @@ class GridBotController:
         # print('Bot name is {}'.format(self.name))
         self.session = getSession('sqlite:///{}.db'.format(self.name))
 
-        bot = self.session.query(GridBotModel).first()
-        if bot == None:
+        bot_model = self.session.query(GridBotModel).first()
+        if bot_model == None:
             self._initializeDatabase()
         else:
-            self.bot = bot
+            self.bot_model = bot_model
 
 
     def _initializeDatabase(self):
         """ Function that initializes the database
         by creating a bot with two pairs. """
-        self.bot = GridBotModel(
+        self.bot_modelbot_model = GridBotModel(
             name = self.name,
             symbol = self.symbol,
             exchange = self.exchange.exchange_id,
@@ -93,19 +93,19 @@ class GridBotController:
             trade_amount = self.trade_amount,
             trade_step = self.trade_step,
             test_run = self.test_mode)
-        self.session.add(self.bot)
+        self.session.add(self.bot_model)
         self.session.commit()
 
 
     def executeBot(self):
         ticker = self.exchange.ccxt.fetchTicker(self.symbol)
         last_price = Decimal(ticker['last'])
-        open_orders = self.bot.getOpenOrders(self.session)
+        open_orders = self.bot_model.getOpenOrders(self.session)
         if len(open_orders) == 0:
             # Place Initial Buy Orders
             self.status_printer.text = 'Palcing Initial Orders'
             self.placeInitialOrders(last_price)
-            open_orders = self.bot.getOpenOrders(self.session)
+            open_orders = self.bot_model.getOpenOrders(self.session)
         for order in open_orders:
             self.status_printer.text = 'Checking Placed Orders'
             self.updateOpenOrder(order, last_price)
@@ -129,8 +129,8 @@ class GridBotController:
             # try:
             exchange_order_info = self.exchange.getOrder(order.symbol, order.id, is_custom_id=True)
             # except Exception:
-            #     self.toLog('Error getting data from the exchange for updating open order on {}.'.format(self.symbol), should_print=True)
-            #     self.toLog(sys.exc_info(), should_print=True)
+            #     self.log('Error getting data from the exchange for updating open order on {}.'.format(self.symbol))
+            #     self.log(sys.exc_info())
             #     return
         else:
             raise NotImplementedError('Test Mode not implemented for GridBot')
@@ -148,12 +148,12 @@ class GridBotController:
                 self.screen.clear()
                 self.screen.refresh()
                 # pprint(exchange_order_info)
-                self.toLog('Buy order at {} filled, place exit.'.format(order.price))
+                self.log('Buy order at {} filled, place exit.'.format(order.price))
                 self.placeExitOrder(order)
                 self.placeFarthestEntryOrder(last_price)
             elif (order.status in ['canceled', 'expired', 'rejected']):
                 if order.executed_quantity > 0:
-                    self.toLog('Buy order at {} canceled, but partially filled, place exit.'.format(order.price))
+                    self.log('Buy order at {} canceled, but partially filled, place exit.'.format(order.price))
                     self.placeExitOrder(order)
                     self.placeFarthestEntryOrder(last_price)
                 else:
@@ -165,7 +165,7 @@ class GridBotController:
                 self.screen.clear()
                 self.screen.refresh()
                 # pprint(exchange_order_info)
-                self.toLog('Sell order at {} filled, cancel farthest buy order and replace with new buy order.'.format(order.price))
+                self.log('Sell order at {} filled, cancel farthest buy order and replace with new buy order.'.format(order.price))
                 self.cancelFarthestEntryOrder(last_price)
                 self.placeEntryOrder(order)
                 order.is_closed = True
@@ -199,7 +199,7 @@ class GridBotController:
 
 
     def updateLastOrder(self, last_price):
-        open_orders = [order for order in self.bot.getOpenOrders(self.session) if order.side == 'buy']
+        open_orders = [order for order in self.bot_model.getOpenOrders(self.session) if order.side == 'buy']
         if len(open_orders) == 0:
             return
         farthest_order = None
@@ -230,7 +230,7 @@ class GridBotController:
 
 
     def cancelFarthestEntryOrder(self, last_price):
-        open_orders = [order for order in self.bot.getOpenOrders(self.session) if order.side == 'buy']
+        open_orders = [order for order in self.bot_model.getOpenOrders(self.session) if order.side == 'buy']
         if len(open_orders) == 0:
             return
         farthest_order = None
@@ -246,7 +246,7 @@ class GridBotController:
 
 
     def placeFarthestEntryOrder(self, last_price):
-        open_orders = [order for order in self.bot.getOpenOrders(self.session) if order.side == 'buy']
+        open_orders = [order for order in self.bot_model.getOpenOrders(self.session) if order.side == 'buy']
         if len(open_orders) == 0:
             buy_price = last_price * Decimal(1 - self.trade_step)
             self.placeOrder(
@@ -276,7 +276,7 @@ class GridBotController:
 
     def placeOrder(self, entry_order=None, **order_params):
         """ Create Order model and place order to exchange. """
-        order_params['bot_id'] = self.bot.id
+        order_params['bot_id'] = self.bot_model.id
         new_order = placeNewOrder(
             exchange = self.exchange, 
             symbol = self.symbol, 
@@ -296,11 +296,11 @@ class GridBotController:
             entry_order.is_closed = True
             entry_order.matched_order_id = new_order.id
         else:
-            self.bot.current_balance = self.bot.current_balance \
-                - Decimal(self.trade_amount) * Decimal(self.bot.starting_balance)
+            self.bot_model.current_balance = self.bot_model.current_balance \
+                - Decimal(self.trade_amount) * Decimal(self.bot_model.starting_balance)
 
 
-    def toLog(self, message, should_print=False):
+    def log(self, message, should_print=True):
         # if self.screen:
         #     self.screen.clear()
         #     self.screen.refresh()

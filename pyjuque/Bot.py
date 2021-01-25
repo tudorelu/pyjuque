@@ -7,7 +7,7 @@ from pyjuque.Engine.BotController import BotController
 from pyjuque.Engine.GridBotController import GridBotController
 from pyjuque.Exchanges.CcxtExchange import CcxtExchange 
 from pprint import pprint 
-
+import functools
 # bot_config = {
 #     'db_url' : 'sqlite:///my_first_strategy.db',
 #     'name' : 'bot1',
@@ -50,7 +50,6 @@ def defineTaBot(bot_config):
         assert key in bot_config.keys(), '{} should be inside the config object'.format(key)
     for key in ['name', 'params']:
         assert key in bot_config['exchange'].keys(), '{} should be inside the exchange config object'.format(key)
-    
     session = getSession(bot_config['db_url'])
     bot_name = bot_config['name']
     exchange_name = bot_config['exchange']['name']
@@ -58,23 +57,38 @@ def defineTaBot(bot_config):
     exchange = CcxtExchange(exchange_name, exchange_params)
     symbols = bot_config['symbols']
     bot_model = session.query(TABotModel).filter_by(name=bot_name).first()
-    pprint(bot_model)
+    # pprint(bot_model)
+    
     if bot_model is None:
         print('No bot found by name: {}. Creating...'.format(bot_name))
         InitializeDatabaseTaBot(session, bot_config)
         return defineTaBot(bot_config)
     
-    strategy = None
-    if bot_config.__contains__('entry_strategy'):
-        if bot_config['entry_strategy'].__contains__('function'):
-            strategy = bot_config['entry_strategy']['function'](**bot_config['entry_strategy']['params'])
-    
     print('Bot model before init bot_controller', bot_model)
-    bot_controller = BotController(session, bot_model, exchange, strategy)
+    bot_controller = BotController(session, bot_model, exchange, None)
     if bot_config.__contains__('display_status'):
         if bot_config['display_status']:
             status_printer = yaspin()
             bot_controller.status_printer = status_printer
+    
+    if bot_config.__contains__('strategy'):
+        found = False
+        if bot_config['strategy'].__contains__('custom'):
+            if bot_config['strategy']['custom'] == True:
+                found = True
+                if bot_config['strategy'].__contains__('entry_function'):
+                    bot_controller.checkEntryStrategy = functools.partial(bot_config['strategy']['entry_function'], bot_controller)
+                else:
+                    def nothing(self, symbol): return False
+                    bot_controller.checkEntryStrategy = functools.partial(nothing, bot_controller)
+                if bot_config['strategy'].__contains__('exit_function'):
+                    bot_controller.checkExitStrategy = functools.partial(bot_config['strategy']['exit_function'], bot_controller)
+                else:
+                    def nothing(self, symbol): return False
+                    bot_controller.checkExitStrategy = functools.partial(nothing, bot_controller)
+
+        if not found and bot_config['strategy'].__contains__('function'):
+            bot_controller.strategy = bot_config['strategy']['function'](**bot_config['strategy']['params'])
     
     return bot_controller
 
@@ -128,7 +142,7 @@ def defineTaBot(bot_config):
 #         left_to_sleep = bot_config['sleep']
 #         while left_to_sleep > 0:
 #             if bot_controller.status_printer != None:
-#                 open_orders = bot_controller.bot.getOpenOrders(bot_controller.session)
+#                 open_orders = bot_controller.bot_model.getOpenOrders(bot_controller.session)
 #                 bot_controller.status_printer.text = 'Open Orders: {} | Checking signals in {} |'.format(
 #                     len(open_orders), 
 #                     left_to_sleep)

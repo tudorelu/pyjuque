@@ -4,8 +4,8 @@ curr_path = os.path.abspath(__file__)
 root_path = os.path.abspath(
     os.path.join(curr_path, os.path.pardir, os.path.pardir))
 sys.path.append(root_path)
-from pyjuque.Exchanges.Binance import Binance
-from pyjuque.Plotting.Plotter import PlotData
+from pyjuque.Exchanges.CcxtExchange import CcxtExchange
+from pyjuque.Plotting import PlotData
 import plotly.graph_objs as go
 
 def horizontal_line(start_time, end_time, value, color=None):
@@ -19,12 +19,12 @@ def horizontal_line(start_time, end_time, value, color=None):
         )
 
 def Main():
-    exchange = Binance()
+    exchange = CcxtExchange('binance')
 
-    symbol = "BTCUSDT"
+    symbol = "BTC/USDT"
     interval = "4h"
 
-    df = exchange.getOHLCV(symbol, interval, 8000)
+    df = exchange.getOHLCVHistory(symbol, interval, 8000)
 
     start_time = df['time'][0]
     end_time = df['time'][len(df)-1]
@@ -35,9 +35,7 @@ def Main():
     level1 = price_max - 0.236 * diff
     level2 = price_max - 0.382 * diff
     level3 = price_max - 0.618 * diff
-    
     lines = []
-
     lines.append(horizontal_line(
         start_time, end_time, price_max, 
         color="rgba(255, 0, 0, 255)"))
@@ -57,7 +55,7 @@ def Main():
     PlotData(df, 
         add_candles=False, 
         plot_shapes=lines,
-        plot_title="fib_levels_"+symbol.lower() + "_" + interval, 
+        plot_title="fib_levels_"+symbol.replace('/', '').lower() + "_" + interval, 
         show_plot=True)
 
 

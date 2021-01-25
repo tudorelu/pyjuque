@@ -11,7 +11,7 @@ class FetchHistoricalDataException(Exception):
 
 class CcxtExchange():
 
-    def __init__(self, exchange_id, params):
+    def __init__(self, exchange_id, params={}):
         self.exchange_id = exchange_id # 'binance'
         self.exchange_class = getattr(ccxt, exchange_id)
         self.ccxt = self.exchange_class(params)

@@ -20,23 +20,8 @@ BINANCE_API_SECRET=...
 
 You should be good to go! Check out the example section. 
 
-### Structure
-Code is contained in `pyjuque`. Tests are in `tests`.
-
 ## Features
 This library implements the following features:
-
-### Strategies
-At `pyjuque/Strategies`. 
-
-A base module which allows us to define buying & selling strategies for crypto assets. Each strategy will contain the following phases: 
-`setup` (where the indicators are computed), 
-`getIndicators` (to be used for plotting), 
-`checkLongSignal`, `checkShortSignal`, 
-`getBuySignalsList` and `getSellSignalsList` (the last two to be used for backtesting). 
-
-Currently contains a few basic strategies. More strategies will be added together with a **build your own** strategy template. Should seamlessly connect to the **Backtesting** & **Bot Controller** modules.
-
 
 ### Bot Controller
 At `pyjuque/Engine/BotController.py`. 
@@ -65,10 +50,10 @@ Backtester infrastructure currently supports:
   - stop loss, trailing stop loss
   - subsequent entries logic (as if Dollar Cost Averaging is enabled)
 
-Checkout this [example](/examples/try_backtester.py).
+<!-- Checkout this [example](/examples/try_backtester.py). -->
 
 ### Plotting
-There is some basic functionality for plotting in `pyjuque/Plotter`
+There is some basic functionality for plotting in `pyjuque/Plotting`
 
 ### Exchange Connectors
 
@@ -84,10 +69,10 @@ At `pyjuque/Exchanges`.
   - [Binance](/pyjuque/Exchanges/Binance.py) - based on the official [REST API](https://github.com/binance-exchange/binance-official-api-docs/blob/master/rest-api.md)
 
 
-### Strategy Optimiser 
+<!-- ### Strategy Optimiser 
 At `pyjuque/Strategies/StrategyOptimiser.py`. 
 
-Currently allows for optimising strategy parameters using a genetic algorithm. Checkout this [example](/examples/try_strategy_optimiser.py).
+Currently allows for optimising strategy parameters using a genetic algorithm. Checkout this [example](/examples/try_strategy_optimiser.py). -->
 
 ### Local Order Book (for Binance)
 At `pyjuque/Exchanges/BinanceOrderBook.py`. 

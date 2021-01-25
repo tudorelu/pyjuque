@@ -4,7 +4,7 @@ from os import getenv
 from os.path import abspath, join, pardir
 sys.path.append(abspath(join(abspath(__file__), pardir, pardir)))
 
-from pyjuque.Engine.Models.BotModels import TABot as Bot, Order, Pair, EntrySettings, ExitSettings, getSession
+from pyjuque.Engine.Models.BotModels import TABotModel as Bot, OrderModel as Order, Pair, EntrySettings, ExitSettings, getSession
 from pyjuque.Engine.BotController import BotController
 from pprint import pprint
 from pyjuque.Strategies.BBRSIStrategy import BBRSIStrategy

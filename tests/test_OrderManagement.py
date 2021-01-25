@@ -26,7 +26,7 @@ from pyjuque.Exchanges.Binance import Binance
 from pyjuque.Strategies.EMAXStrategy import EMAXStrategy 
 from pyjuque.Engine import backtest, BotController, OrderModel as Order, PairModel as Pair, \
     TABotModel as Bot, EntrySettingsModel as EntrySettings, ExitSettingsModel as ExitSettings
-from pyjuque.Plotting.Plotter import PlotData 
+from pyjuque.Plotting import PlotData 
 
 class OrderManagementTests(unittest.TestCase):
     ############################

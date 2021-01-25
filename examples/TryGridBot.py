@@ -141,7 +141,7 @@ if __name__ == '__main__':
     while True:
         bot.status_printer.stop()
 
-        open_orders = bot.bot.getOpenOrders(bot.session)
+        open_orders = bot.bot_model.getOpenOrders(bot.session)
         buy_orders = [order for order in open_orders if order.side == 'buy']
         sell_orders = [order for order in open_orders if order.side == 'sell']
 
