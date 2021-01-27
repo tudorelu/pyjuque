@@ -45,11 +45,21 @@ import functools
 #     'display_status' : True
 # }
 
-def defineTaBot(bot_config):
+def defineBot(bot_config):
     for key in ['db_url', 'name', 'symbols', 'exchange', 'type']:
         assert key in bot_config.keys(), '{} should be inside the config object'.format(key)
     for key in ['name', 'params']:
         assert key in bot_config['exchange'].keys(), '{} should be inside the exchange config object'.format(key)
+    
+    bot_type = bot_config['type']
+    
+    assert bot_type == 'ta', 'can only have \'ta\' as the bot\'s type for now' 
+
+    bot_controller = _defineTaBot(bot_config)
+    
+    return bot_controller
+
+def _defineTaBot(bot_config):
     session = getSession(bot_config['db_url'])
     bot_name = bot_config['name']
     exchange_name = bot_config['exchange']['name']
@@ -57,13 +67,12 @@ def defineTaBot(bot_config):
     exchange = CcxtExchange(exchange_name, exchange_params)
     symbols = bot_config['symbols']
     bot_model = session.query(TABotModel).filter_by(name=bot_name).first()
-    # pprint(bot_model)
     
     if bot_model is None:
         print('No bot found by name: {}. Creating...'.format(bot_name))
         InitializeDatabaseTaBot(session, bot_config)
-        return defineTaBot(bot_config)
-    
+        return _defineTaBot(bot_config)
+
     print('Bot model before init bot_controller', bot_model)
     bot_controller = BotController(session, bot_model, exchange, None)
     if bot_config.__contains__('display_status'):
@@ -76,16 +85,18 @@ def defineTaBot(bot_config):
         if bot_config['strategy'].__contains__('custom'):
             if bot_config['strategy']['custom'] == True:
                 found = True
+                def nothing(self, symbol): return False, None
+                entry_function = nothing
+                exit_function = nothing
                 if bot_config['strategy'].__contains__('entry_function'):
-                    bot_controller.checkEntryStrategy = functools.partial(bot_config['strategy']['entry_function'], bot_controller)
-                else:
-                    def nothing(self, symbol): return False
-                    bot_controller.checkEntryStrategy = functools.partial(nothing, bot_controller)
+                    if bot_config['strategy']['entry_function'] not in [None, False]:
+                        entry_function = bot_config['strategy']['entry_function']
                 if bot_config['strategy'].__contains__('exit_function'):
-                    bot_controller.checkExitStrategy = functools.partial(bot_config['strategy']['exit_function'], bot_controller)
-                else:
-                    def nothing(self, symbol): return False
-                    bot_controller.checkExitStrategy = functools.partial(nothing, bot_controller)
+                    if bot_config['strategy']['exit_function'] not in [None, False]:
+                        exit_function = bot_config['strategy']['exit_function']
+
+            bot_controller.checkEntryStrategy = functools.partial(entry_function, bot_controller)
+            bot_controller.checkExitStrategy = functools.partial(exit_function, bot_controller)
 
         if not found and bot_config['strategy'].__contains__('function'):
             bot_controller.strategy = bot_config['strategy']['function'](**bot_config['strategy']['params'])

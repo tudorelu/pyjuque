@@ -1,10 +1,10 @@
-import os
+from os.path import abspath, pardir, join
 import sys
-import time
-curr_path = os.path.abspath(__file__)
-root_path = os.path.abspath(
-    os.path.join(curr_path, os.path.pardir, os.path.pardir))
+curr_path = abspath(__file__)
+root_path = abspath(join(curr_path, pardir, pardir))
 sys.path.append(root_path)
+
+import time
 from pprint import pprint
 from pyjuque.Exchanges.BinanceOrderBook import OrderBook
 

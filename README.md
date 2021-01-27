@@ -20,8 +20,8 @@ BINANCE_API_SECRET=...
 
 You should be good to go! Check out the example section. 
 
-## Features
-This library implements the following features:
+## Modules
+This library implements the following modules:
 
 ### Bot Controller
 At `pyjuque/Engine/BotController.py`. 
@@ -33,6 +33,7 @@ A module which handles the buying and selling of assets, given simple or more ad
 - Market, Limit & Stop Loss orders 
 - Placing Exit Order when Entry Order was fulfilled
 - Trading below/above signal by some %
+- State Persistance, the bot stores trades locally
 
 ##### Future Features: 
 - OCO orders
@@ -40,7 +41,7 @@ A module which handles the buying and selling of assets, given simple or more ad
 - Trailing stop loss
 - Multiple trade entries (in case trade goes against you)
 
-State persistence Using SQLAlchemy.
+State persistence Using SQLAlchemy, for any flavour of SQL.
 
 
 ### Backtesting
@@ -118,9 +119,6 @@ print(ordb)
 
 ```
 
-### Tests
-Run them with the command `nose2`
-
 ## **Coming Soon**
 ### More Exchanges
 Binance Futures, Bitmex, Bitfinex, FTX, Bybit.
@@ -129,5 +127,3 @@ Margin Trading, Market Making, Hyper Parameter Tuning.
 # Contributing
 To contribute simply fork the repo, write your desired feature in your own fork and make a pull request upon finishing. Writing tests is also appreciated.
 
-### Adding new Exchanges
-Each exchange should extend the BaseExchange class and implement all functions there. 
