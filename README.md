@@ -256,7 +256,7 @@ Creates and stores a local order book for the specified symbols. Order Book is u
 from pyjuque.Exchanges.BinanceOrderBook import OrderBook
 
 # Initialize & start OrderBook with desired symbols
-ob = OrderBook(symbols=['BTCUSDT', 'LTCUSDT'])
+ob = OrderBook(symbols=['BTC/USDT', 'LTC/USDT'])
 ob.startOrderBook()
 ...
 # Get Updated Order Book data at any point in your code 
@@ -264,7 +264,7 @@ ordb = ob.getOrderBook()
 print(ordb)
 
 {
-  'BTCUSDT': {
+  'BTC/USDT': {
       'asks': [
           ['13662.31000000', '3.24473100'],
           ['13662.82000000', '0.06815300'],
@@ -281,7 +281,7 @@ print(ordb)
         ],
       'lastUpdateId': 6382686192  # ignore this
   },
-  'LTCUSDT': {
+  'LTC/USDT': {
       'asks': [ ... ],
       'bids': [ ... ],
       'lastUpdateId': 1521585540  # ignore this
