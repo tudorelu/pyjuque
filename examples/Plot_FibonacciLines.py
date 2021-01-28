@@ -10,13 +10,13 @@ import plotly.graph_objs as go
 
 def horizontal_line(start_time, end_time, value, color=None):
     return go.layout.Shape(
-            type="line", 
-            x0=start_time, 
-            y0=value,
-            x1=end_time, 
-            y1=value,
-            line=dict(color=color)
-        )
+        type="line", 
+        x0=start_time, 
+        y0=value,
+        x1=end_time, 
+        y1=value,
+        line=dict(color=color)
+    )
 
 def Main():
     exchange = CcxtExchange('binance')

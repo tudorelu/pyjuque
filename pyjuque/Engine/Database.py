@@ -49,9 +49,9 @@ def InitializeDatabaseTaBot(session, params={}):
     if params.__contains__('exit_settings'):
         assert type(params['exit_settings']) == dict
         exit_settings = params['exit_settings']
-        if exit_settings.__contains__('profit_target'):
-            assert type(exit_settings['profit_target']) in [int, float]
-            profit_target = exit_settings['profit_target']
+        if exit_settings.__contains__('take_profit'):
+            assert type(exit_settings['take_profit']) in [int, float]
+            profit_target = exit_settings['take_profit']
 
         if exit_settings.__contains__('stop_loss_value'):
             assert type(exit_settings['stop_loss_value']) in [int, float]
@@ -145,9 +145,9 @@ def InitializeDatabaseGridBot(session, params={}):
     if params.__contains__('exit_settings'):
         assert type(params['exit_settings']) == dict
         exit_settings = params['exit_settings']
-        if exit_settings.__contains__('profit_target'):
-            assert type(exit_settings['profit_target']) in [int, float]
-            profit_target = exit_settings['profit_target']
+        if exit_settings.__contains__('take_profit'):
+            assert type(exit_settings['take_profit']) in [int, float]
+            profit_target = exit_settings['take_profit']
 
         if exit_settings.__contains__('stop_loss_value'):
             assert type(exit_settings['stop_loss_value']) in [int, float]

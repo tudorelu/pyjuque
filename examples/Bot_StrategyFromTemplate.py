@@ -1,11 +1,7 @@
 import time
 
-# Import for defining the bot
-from pyjuque.Bot import defineBot
-
 # Imports for the strategy
 import pandas_ta as ta
-from pyjuque.Strategies import StrategyTemplate
 
 # Importing these to be able to run this example 
 # from the main pyjuque folder
@@ -15,16 +11,14 @@ curr_path = abspath(__file__)
 root_path = abspath(join(curr_path, pardir, pardir))
 sys.path.append(root_path)
 
+# Import for defining the bot
+from pyjuque.Bot import defineBot
+# Import for defining the Strategy
+from pyjuque.Strategies import StrategyTemplate
+
 ## Defines the strategy
-class BBRSIStrategy(Strategy):
-    """ Bollinger Bands x RSI 
-        Params
-        --
-            `rsi_len` = length of RSI
-            `bb_len` = length of Bollinger Bands
-            `rsi_ob` = Overbought level of RSI
-            `rsi_os` = Oversold level of RSI
-    """
+class BBRSIStrategy(StrategyTemplate):
+    """ Bollinger Bands x RSI """
     def __init__(self, rsi_len = 8, bb_len = 100, rsi_ob = 50, rsi_os = 50):
         self.rsi_ob = rsi_ob
         self.rsi_os = rsi_os
@@ -35,7 +29,7 @@ class BBRSIStrategy(Strategy):
         self.minimum_period = max(100, bb_len, rsi_len)
 
     # the bot will call this function with the latest data from the exchange 
-    # passed through df; this function computes all the indicators that we need
+    # passed through df; this function computes all the indicators needed
     # for the signal
     def setUp(self, df):
         df['rsi'] = ta.rsi(df['close'], self.rsi_len)
@@ -45,6 +39,9 @@ class BBRSIStrategy(Strategy):
     # the bot will call this function with the latest data and if this 
     # returns true, our bot will place an order
     def checkLongSignal(self, i = None):
+        """ if the rsi had a sudden increase this candle or the previous one, 
+        and one of the previous three values of the rsi was under the oversold 
+        level, and the price just crossed over the lower bollinger band, buy"""
         df = self.dataframe
         if i == None:
             i = len(df) - 1
@@ -75,16 +72,7 @@ class BBRSIStrategy(Strategy):
 bot_config = {
     # Name of the bot, as stored in the database
     'name' : 'my_bot',
-
-    # URL of the database which stores this bot
-    'db_url' : 'sqlite:///my_simple_bot.db',
-
-    # bot type, only 'ta' for technical analysis is accepted for now
-    'type' : 'ta',
-
-    # time in seconds it waits between checking price & orders
-    'sleep': 40,
-
+    
     # exchange information (fill with your api key and secret)
     'exchange' : {
         'name' : 'binance',
@@ -99,9 +87,6 @@ bot_config = {
 
     # starting balance for bot
     'starting_balance' : 0.0005,
-
-    # quote asset of starting balance
-    'quote_asset': 'BTC',
 
     # strategy class / function (here we define the entry and exit strategies.)
     # this bot places an entry order when the 'checkLongSignal' function of 
@@ -142,10 +127,6 @@ bot_config = {
         'stop_loss_value': 10
     },
 
-    # will the bot use a logger to log/print important actions 
-    # (like placing orders) in the terminal
-    'use_logger' : True,
-
     # will the bot display its status / current performing action in the terminal
     'display_status' : True
 }
@@ -159,8 +140,8 @@ def Main():
             bot_controller.executeBot()
         except KeyboardInterrupt:
             return
-        # waits bot_config['sleep'] seconds between rounds
-        time.sleep(bot_config['sleep'])
+        
+        time.sleep(60)
 
 
 if __name__ == '__main__':

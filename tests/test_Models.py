@@ -38,7 +38,7 @@ class TestOrder(unittest.TestCase):
     
     def test_create_order_table(self):
         """ tests initialization of order table """
-        order_table = Models.Order()
+        order_table = Models.OrderModel()
         self.assertEqual(order_table.__tablename__, 'order')
         self.assertEqual(order_table.bot_id, None)
         self.assertEqual(order_table.symbol, None)
@@ -60,7 +60,7 @@ class TestPair(unittest.TestCase):
 
     def test_create_pair_table(self):
         """ tests initialization of pair table """
-        pair_table = Models.Pair()
+        pair_table = Models.PairModel()
         self.assertEqual(pair_table.__tablename__, 'pair')
         self.assertEqual(pair_table.id, None)
         self.assertEqual(pair_table.bot_id, None)
@@ -75,8 +75,8 @@ class TestCreateBot(unittest.TestCase):
 
     def test_create_bot_table(self):
         """ tests initialization of bot table """
-        bot_table = Models.Bot()
-        self.assertEqual(bot_table.__tablename__, 'bot')
+        bot_table = Models.TABotModel()
+        self.assertEqual(bot_table.__tablename__, 'ta_bot')
         self.assertEqual(bot_table.id, None)
         self.assertEqual(bot_table.name, None)
         self.assertEqual(bot_table.is_running, None)
@@ -84,36 +84,31 @@ class TestCreateBot(unittest.TestCase):
         self.assertEqual(bot_table.quote_asset, None)
         self.assertEqual(bot_table.starting_balance, None)
         self.assertEqual(bot_table.current_balance, None)
-        # self.assertEqual(bot_table.trade_allocation, None)
         self.assertEqual(bot_table.profit_loss, None)
-        # self.assertEqual(bot_table.profit_target, None)
-        # self.assertEqual(bot_table.stop_loss_target, None)
 
     def test_create_btc_bot(self):
         """ tests storing and querying a bot that trades with btc as quote asset. """
         session = get_session()
-        self.assertEqual(len(session.query(Models.Bot).all()), 0)
+        self.assertEqual(len(session.query(Models.TABotModel).all()), 0)
         
         # Create ADABOT
-        adabot = Models.Bot(
-                    name="ada_test_bot",
-                    quote_asset = 'BTC',
-                    starting_balance = 1,
-                    current_balance = 1,
-                    # profit_target = 2,
-                    test_run=True
-                    )
+        adabot = Models.TABotModel(
+            name="ada_test_bot",
+            quote_asset = 'BTC',
+            starting_balance = 1,
+            current_balance = 1,
+            test_run=True
+        )
 
         session.add(adabot)
         session.commit()
-        self.assertEqual(len(session.query(Models.Bot).all()), 1)
+        self.assertEqual(len(session.query(Models.TABotModel).all()), 1)
 
-        adabot = session.query(Models.Bot).filter_by(name="ada_test_bot").first()
+        adabot = session.query(Models.TABotModel).filter_by(name="ada_test_bot").first()
         self.assertEqual(adabot.test_run, True)
         self.assertEqual(adabot.quote_asset, 'BTC')
         self.assertEqual(adabot.starting_balance, 1)
         self.assertEqual(adabot.current_balance, 1)
-        # self.assertEqual(adabot.profit_target, 2)
         self.assertEqual(adabot.profit_loss, 100)  
 
 
@@ -152,37 +147,36 @@ class TestBot(unittest.TestCase):
         self.is_test = True
 
         self.session = get_session()
-        self.assertEqual(len(self.session.query(Models.Bot).all()), 0)
+        self.assertEqual(len(self.session.query(Models.TABotModel).all()), 0)
 
         # Create bot
-        bot = Models.Bot(
-                    id=self.bot_id,
-                    name=self.bot_name,
-                    quote_asset=self.quote_asset,
-                    starting_balance=self.starting_balance,
-                    current_balance=self.current_balance,
-                    # profit_target=self.profit_target,
-                    test_run=self.test_run,
-                    )
+        bot = Models.TABotModel(
+            id=self.bot_id,
+            name=self.bot_name,
+            quote_asset=self.quote_asset,
+            starting_balance=self.starting_balance,
+            current_balance=self.current_balance,
+            test_run=self.test_run,
+        )
 
         # TODO Should check if pair contains the quote asset saved in bot.
         # Create ETHBTC pair
-        ethpair = Models.Pair(
-                            id=self.pair_id_eth,
-                            bot_id=self.bot_id,
-                            symbol=self.symbol_eth,
-                            profit_loss=self.profit_loss_eth,
-                             )
+        ethpair = Models.PairModel(
+            id=self.pair_id_eth,
+            bot_id=self.bot_id,
+            symbol=self.symbol_eth,
+            profit_loss=self.profit_loss_eth,
+        )
         # Create ADABTC pair
-        adapair = Models.Pair(
-                            id=self.pair_id_ada,
-                            bot_id=self.bot_id,
-                            symbol=self.symbol_ada,
-                            profit_loss=self.profit_loss_ada,
-                             )
+        adapair = Models.PairModel(
+            id=self.pair_id_ada,
+            bot_id=self.bot_id,
+            symbol=self.symbol_ada,
+            profit_loss=self.profit_loss_ada,
+        )
 
         # Create ethereum buy order
-        ethorder = Models.Order(
+        ethorder = Models.OrderModel(
             id=self.order_id,
             bot_id=self.bot_id,
             symbol=self.order_symbol,
@@ -200,7 +194,7 @@ class TestBot(unittest.TestCase):
         self.session.add(ethorder)
         self.session.commit()
 
-        self.bot = self.session.query(Models.Bot).filter_by(name=self.bot_name).first()
+        self.bot = self.session.query(Models.TABotModel).filter_by(name=self.bot_name).first()
 
     def test_getActivePairs(self):
         """ test getActivePairs method """

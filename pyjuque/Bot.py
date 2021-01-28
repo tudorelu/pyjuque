@@ -46,14 +46,30 @@ import functools
 # }
 
 def defineBot(bot_config):
-    for key in ['db_url', 'name', 'symbols', 'exchange', 'type']:
+    for key in ['name', 'symbols', 'exchange']:
         assert key in bot_config.keys(), '{} should be inside the config object'.format(key)
     for key in ['name', 'params']:
         assert key in bot_config['exchange'].keys(), '{} should be inside the exchange config object'.format(key)
     
-    bot_type = bot_config['type']
+    accepted_types = ['ta']
+    bot_type = 'ta'
+    if bot_config.__contains__('type'):
+        bot_type = bot_config['type']
     
-    assert bot_type == 'ta', 'can only have \'ta\' as the bot\'s type for now' 
+    assert bot_type in accepted_types, 'The bot\'s type must be one of {}'.format(accepted_types) 
+        
+    symbols = bot_config['symbols']
+    assert len(symbols) > 0, 'You provided an empty symbols list!' + \
+        ' It should hold at least one valid symbol.'
+    init_symbol = symbols[0]
+    quote_asset = symbols[0].split('/')[1]
+    for symbol in symbols:
+        symbol_quote = symbol.split('/')[1]
+        assert quote_asset == symbol_quote, 'All pairs must be trading against the same' + \
+            ' asset, but in this case they don\'t: {}, {}'.format(init_symbol, symbol)
+
+    if not bot_config.__contains__('db_url'):
+        bot_config['db_url'] = 'sqlite:///{}.db'.format(bot_config['name'])
 
     bot_controller = _defineTaBot(bot_config)
     
@@ -65,7 +81,6 @@ def _defineTaBot(bot_config):
     exchange_name = bot_config['exchange']['name']
     exchange_params = bot_config['exchange']['params']
     exchange = CcxtExchange(exchange_name, exchange_params)
-    symbols = bot_config['symbols']
     bot_model = session.query(TABotModel).filter_by(name=bot_name).first()
     
     if bot_model is None:
@@ -73,7 +88,7 @@ def _defineTaBot(bot_config):
         InitializeDatabaseTaBot(session, bot_config)
         return _defineTaBot(bot_config)
 
-    print('Bot model before init bot_controller', bot_model)
+    # print('Bot model before init bot_controller', bot_model)
     bot_controller = BotController(session, bot_model, exchange, None)
     if bot_config.__contains__('display_status'):
         if bot_config['display_status']:

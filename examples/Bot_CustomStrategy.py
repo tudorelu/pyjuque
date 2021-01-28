@@ -1,11 +1,7 @@
 import time
 
-# Import for defining the bot
-from pyjuque.Bot import defineBot
-
 # Imports for the strategy
 import pandas_ta as ta
-from pyjuque.Strategies import StrategyTemplate
 
 # Importing these to be able to run this example 
 # from the main pyjuque folder
@@ -14,6 +10,9 @@ import sys
 curr_path = abspath(__file__)
 root_path = abspath(join(curr_path, pardir, pardir))
 sys.path.append(root_path)
+
+# Import for defining the bot
+from pyjuque.Bot import defineBot
 
 
 def customEntryStrategy(bot_controller, symbol):
@@ -69,16 +68,7 @@ def customEntryStrategy(bot_controller, symbol):
 ## Defines the overall configuration of the bot 
 bot_config = {
     # Name of the bot, as stored in the database
-    'name' : 'my_bot',
-
-    # URL of the database which stores this bot
-    'db_url' : 'sqlite:///my_simple_bot.db',
-
-    # bot type, 'ta' for technical analysis or 'grid'
-    'type' : 'ta',
-
-    # time in seconds it waits between checking price & orders
-    'sleep': 40,
+    'name' : 'my_multi_timeframe_bot',
 
     # exchange information (fill with your api key and secret)
     'exchange' : {
@@ -94,9 +84,6 @@ bot_config = {
 
     # starting balance for bot
     'starting_balance' : 0.0005,
-
-    # quote asset of starting balance
-    'quote_asset': 'BTC',
 
     # strategy class / function (here we define the entry and exit strategies.)
     # this bot places an entry order when 'customEntryStrategy' retruns true
@@ -131,10 +118,6 @@ bot_config = {
         'stop_loss_value': 10
     },
 
-    # will the bot use a logger to log/print important actions 
-    # (like placing orders) in the terminal
-    'use_logger' : True,
-
     # will the bot display its status / current performing action in the terminal
     'display_status' : True
 }
@@ -148,8 +131,7 @@ def Main():
             bot_controller.executeBot()
         except KeyboardInterrupt:
             return
-        # waits bot_config['sleep'] seconds between rounds
-        time.sleep(bot_config['sleep'])
+        time.sleep(60)
 
 
 if __name__ == '__main__':

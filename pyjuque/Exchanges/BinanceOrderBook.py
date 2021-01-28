@@ -48,7 +48,7 @@ def onError(ws, error):
 
 def onMessage(ws, message):
   json_message = json.loads(message)
-  pprint(json_message['data']['s'])
+  # pprint(json_message['data']['s'])
   symbol = json_message['data']['s']
   global order_book_initialized
   if not order_book_initialized[symbol]:

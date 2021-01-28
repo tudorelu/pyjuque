@@ -56,6 +56,8 @@ class BotController:
         self.log("Checking orders state...", should_print=False)
         for order in open_orders:
             self.updateOpenOrder(order)
+        
+        self.log("Executed the bot loop. Now waiting...", should_print=False)
 
 
     def checkEntryStrategy(self, symbol):
@@ -285,6 +287,7 @@ class BotController:
         else:
             # Calculates quantity of order. 
             # Takes in to account partially filled orders.
+            last_price = order.price
             stop_loss_value = self.bot_model.exit_settings.stop_loss_value 
             profit_target = self.bot_model.exit_settings.profit_target
             quantity = self.computeMatchingOrderQuantity(order)

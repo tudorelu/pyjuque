@@ -84,7 +84,7 @@ class GridBotController:
     def _initializeDatabase(self):
         """ Function that initializes the database
         by creating a bot with two pairs. """
-        self.bot_modelbot_model = GridBotModel(
+        self.bot_model = GridBotModel(
             name = self.name,
             symbol = self.symbol,
             exchange = self.exchange.exchange_id,
