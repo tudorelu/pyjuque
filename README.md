@@ -87,7 +87,7 @@ bot_config = {
     # exchange information (fill with your api key and secret)
     'exchange' : {
         'name' : 'binance', # or 'okex'
-        'params' : {
+        'params' : {  # any parameter accepted by ccxt can go here
             'api_key': 'your_api_key_here',
             'secret' : 'your_secret_here',
             # 'password' : 'your_password_here' # if using 'okex'

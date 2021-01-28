@@ -188,7 +188,7 @@ class BotController:
 
     def reviveOriginalBuyOrder(self, order):
         """ If sell order was cancelled due to some reason, revive buy order and look to exit again. """
-        original_buy_order = self.bot_model.getOrder(order.position_id)
+        original_buy_order = self.session.query(Order).get(order.id)
         original_buy_order.is_closed = False
         original_buy_order.executed_quantity = Decimal(order.original_quantity) - Decimal(order.executed_quantity)
         return original_buy_order
@@ -278,12 +278,13 @@ class BotController:
             quantity = self.computeMatchingOrderQuantity(order)
             order_type = 'market'
             side = 'sell'
-            self.placeOrder(
-                order.symbol, pair,
-                order = order,
-                quantity = quantity,
-                side = side,
-                order_type = order_type)
+            if quantity > 0:
+                self.placeOrder(
+                    order.symbol, pair,
+                    order = order,
+                    quantity = quantity,
+                    side = side,
+                    order_type = order_type)
         else:
             # Calculates quantity of order. 
             # Takes in to account partially filled orders.
@@ -301,11 +302,13 @@ class BotController:
                     / Decimal(100)) * Decimal(last_price)
                 order_type = 'stop_loss'
                 side = 'sell'
-            self.placeOrder(
-                symbol=order.symbol, pair=pair, 
-                order=order, price=price, 
-                quantity=quantity, side=side, 
-                order_type=order_type)
+
+            if quantity > 0:
+                self.placeOrder(
+                    symbol=order.symbol, pair=pair, 
+                    order=order, price=price, 
+                    quantity=quantity, side=side, 
+                    order_type=order_type)
 
 
     def processClosedPosition(self, order, pair):
