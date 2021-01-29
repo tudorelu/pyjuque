@@ -68,7 +68,7 @@ class BotController:
             df = self.exchange.getOHLCV(symbol, self.kline_interval, self.strategy.minimum_period)
         except Exception as e:
             self.log('Error getting data from the exchange for {}:'.format(symbol))
-            self.log(sys.exc_info()[2])
+            self.logError(sys.exc_info())
             return False, None
         self.strategy.setUp(df)
         entry_signal = self.strategy.checkLongSignal(len(df) - 1)
@@ -125,14 +125,14 @@ class BotController:
             except Exception as e:
                 self.log('Error getting data from the exchange for'
                     ' updating open order on {}.'.format(order.symbol))
-                self.log(sys.exc_info()[2])
+                self.logError(sys.exc_info())
                 return
         else:
             try:
                 exchange_order_info = simulateOrderInfo(self.exchange, order, self.kline_interval)
             except Exception as e:
                 self.log('Error simulating open order on {}.'.format(order.symbol))
-                self.log(sys.exc_info()[2])
+                self.logError(sys.exc_info())
                 return
         # update order params.
         order.side = exchange_order_info['side']
@@ -225,7 +225,7 @@ class BotController:
         except Exception:
             self.log('Error getting data from the exchange '
                 'for updating open sell order on {}:'.format(pair.symbol))
-            self.log(sys.exc_info()[2])
+            self.logError(sys.exc_info())
             return
         current_price = candlestick_data.iloc[-1]['close']
         stop_loss_value = self.bot_model.exit_settings.stop_loss_value
@@ -263,7 +263,7 @@ class BotController:
             df = self.exchange.getOHLCV(symbol, self.kline_interval, self.strategy.minimum_period)
         except Exception:
             self.log('Error getting data from the exchange for {}:'.format(symbol))
-            self.log(sys.exc_info()[2])
+            self.logError(sys.exc_info())
             return False, None
         self.strategy.setUp(df)
         exit_signal = self.strategy.checkShortSignal(len(df) - 1)
@@ -367,3 +367,12 @@ class BotController:
             self.status_printer.start()
         elif self.logger_on or force:
             logger.info(message)
+
+
+    def logError(self, message):
+        if self.status_printer != None:
+            self.status_printer.stop()
+            print(message)
+            self.status_printer.start()
+        else:
+            print(message)
