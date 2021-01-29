@@ -4,34 +4,34 @@
 
 This project implements the basic functionality required to engage in algorithmic trading. It can be regarded as a starting point for more complex trading bots.
 
-## Getting Started
+## Installation
 Make sure you have pip installed. Run:
+
 ```sh
 pip install pyjuque
 ```
 
-
 You should be good to go! Check out the example section. 
 
-## Run a Simple Bot
+## Getting Started
 
-Checkout these examples to get started stratght away: [strategy 1](/examples/Bot_CustomStrategy.py), [strategy 2](/examples/Bot_StrategyFromTemplate.py). Read the next section to understand the thinking behind pyjuque.
+Checkout these examples to get started stratght away: [strategy 1](/examples/Bot_CustomStrategy.py), [strategy 2](/examples/Bot_StrategyFromTemplate.py). Below is the simplest example of how to get started with pyjuque. Read the next section to understand the thinking behind it.
 
 ```py
 from pyjuque.Bot import defineBot
 import time
 
 def customEntryStrategy(bot_controller, symbol):
-    # ... do some stuff
-    # Return the signal and the last price
-    return False, None
+    # signal = will_moon(symbol)          # bool
+    # last_price = get_price(symbol)      # float
+    return signal, last_price
 
 ## Defines the overall configuration of the bot 
 bot_config = {
     'name' : 'my_bot',
     'exchange' : {
         'name' : 'binance',
-        'params' : {
+        'params' : {                      # put here any param that ccxt accepts
             'api_key': 'YOUR_API_KEY',
             'secret' : 'YOUR_API_SECRET'
         },
@@ -134,9 +134,6 @@ bot_config = {
         # buy order's filled price
         'stop_loss_value': 10
     },
-
-    # will the bot display its status / current performing action in the terminal
-    'display_status' : True
 }
 ```
 
@@ -228,6 +225,28 @@ At `pyjuque/Engine/BotController.py`.
 
 A module which handles the buying and selling of assets, given simple or more advanced rules, allowing us to run a strategy indefinitely. 
 
+Through the bot controller you can access the following objects
+ - [bot_controller.exchange](/pyjuque/Exchanges/CcxtExchange.py) 
+    - bot_controller.exchange has some methods that are used under the hood by pyjquue, like 
+        - getOHLCV
+        - placeLimitOrder 
+        - placeMarketOrder
+        - etc
+ - **bot_controller.exchange.ccxt**, a [ccxt](https://github.com/ccxt/ccxt) object which uses the credentials you provided in the bot_config 
+ - **bot_controller.session**, SQLAlchemy session through which you can query the database 
+ - [**bot_controller.bot model**](/pyjuque/Engine/Models/BotModels.py#L89), the model of the bot as stored in the db
+ - **bot_controller.status_printer**, a [yaspin](https://github.com/pavdmyt/yaspin) spinner used for logging
+
+You can also access the following functions
+  - **bot_controller.executeBot()**, which goes through a bot loop of:
+    - checking signals on symbols and placing orders if signals are true
+    - checking all open orders placed by the bot and updating them, like so: 
+        - if a buy order was filled it places the subsequent exit order, at a take_profit price above the buy price
+        - if the current price is below stop_loss_value for an open buy order, exits using market price
+  - **bot_controller.log()** which allows you to print some stuff to the terminal
+  - **bot_controller.bot_model.getOrders(bot_controller.session)** which allows you to get all orders
+  - **bot_controller.bot_model.getOpenOrders(bot_controller.session)** which allows you to get all open orders
+  
 ### Exchange Connectors
 
 Implementing multiple exchanges with [ccxt](https://github.com/ccxt/ccxt). Check out implementation at [CcxtExchange](/pyjuque/Exchanges/CcxtExchange.py). Currently implemented:
