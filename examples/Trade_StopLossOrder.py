@@ -6,6 +6,7 @@ from os import getenv
 from pprint import pprint
 from pyjuque.Exchanges.CcxtExchange import CcxtExchange
 
+
 def Main():
     exchange = CcxtExchange('okex', {
         'apiKey': getenv('OKEX_API_KEY'), 

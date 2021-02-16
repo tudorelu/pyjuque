@@ -94,6 +94,9 @@ def _defineTaBot(bot_config):
         if bot_config['display_status']:
             status_printer = yaspin()
             bot_controller.status_printer = status_printer
+    else:
+        status_printer = yaspin()
+        bot_controller.status_printer = status_printer
     
     if bot_config.__contains__('strategy'):
         found = False
