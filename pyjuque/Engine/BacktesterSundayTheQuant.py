@@ -57,6 +57,7 @@ class Backtester():
         self.balance = self.initial_balance
         self.locked_in_trades = 0
         self.locked_trades = 0
+        self.first_price = 0
         self.last_price = 0
         self.unrealised_profits = 0
         self.open_positions = 0
@@ -186,6 +187,7 @@ class Backtester():
         # symbol = self.params['symbol']
         # start_date = self.params['start_date']
         # end_date = self.params['end_date']
+        buy_n_hold = self.initial_balance * (self.last_price / self.first_price)
         profit = sum(self.profit) / self.last_price
         drawdown = sum(self.drawdown)
         fees = (abs(profit) * self.fee_cost * self.num_operations) / self.last_price
@@ -201,6 +203,7 @@ class Backtester():
             'profit' :	profit + self.unrealised_profits,
             'profit_realised': profit, 
             'profit_unrealised' : self.unrealised_profits,
+            'profit_buy_and_hold' : buy_n_hold - self.initial_balance,
             # 'drawdown': drawdown,
             # 'entries': self.entries,
             # 'exits': self.exits,
@@ -222,7 +225,9 @@ class Backtester():
         close = df['close']
         low = df['low']
         time = df['time']
+
         self.strategy.setUp(df)
+
         for i in range(len(df)):
 
             # Check Signals
@@ -244,6 +249,7 @@ class Backtester():
                     self.close_position(price = self.stop_loss_price, time = time[i])
                 elif low[i] <= self.take_profit_price:
                     self.close_position(price = self.take_profit_price, time = time[i])
+            
             # Update Trailing Stop Loss If Available
             if self.trailing_stop_loss and (self.is_long_open or self.is_short_open):
                 new_max = high[self.from_opened : i].max()
@@ -251,6 +257,7 @@ class Backtester():
                 self.set_stop_loss(price = new_max)
                 if previous_stop_loss > self.stop_loss_price:
                     self.stop_loss_price = previous_stop_loss
+            
             if self.balance > 0:
                 # Open New Trades If We Received Signals
                 if long_signal and self.entry_on_longs:
@@ -263,6 +270,7 @@ class Backtester():
                     self.set_stop_loss(price = close[i], sl_short = self.stop_loss_value)
                 
 
+        self.first_price = close[0]
         last_price = close[len(close) - 1]
         last_exit = self.exits[len(self.exits) - 1]
         remaining_amount = 0
