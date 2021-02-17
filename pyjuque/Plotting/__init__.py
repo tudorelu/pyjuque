@@ -122,7 +122,7 @@ def GetPlotData(df,
                     xaxis = ind['xaxis'], 
                     yaxis = ind['yaxis'], 
                     marker_color = ind['color'], 
-                    showlegend=ind['showlegend'],
+                    showlegend = ind['showlegend'],
                     width = ind['width'],
                 marker = dict(color = ind['color']))
             else:
@@ -134,7 +134,7 @@ def GetPlotData(df,
                     xaxis = ind['xaxis'], 
                     yaxis = ind['yaxis'], 
                     fill = ind['fill'], 
-                    showlegend=ind['showlegend'],
+                    showlegend = ind['showlegend'],
                     line = dict(color = ind['color']))
 
             data.append(trace)
@@ -152,50 +152,19 @@ def GetPlotData(df,
 
     if signals:
         for signal in signals:
-            size_multiplier = [1 for z in signal["points"]]
+            size_multiplier = [10 for z in signal["points"]]
             if len(signal["points"]) > 1:
                 if len(signal["points"][0]) > 2:
                     size_multiplier = [z[2] for z in signal["points"]]
+
             scat = go.Scatter(
                 x = [item[0] for item in signal['points']],
                 y = [item[1] for item in signal['points']],
                 name = signal['name'],
                 mode = "markers",
-                marker_size = [13 * s for s in size_multiplier]  
+                marker_size = size_multiplier 
             )
             data.append(scat)
-
-
-    if buy_signals:
-        size_multiplier = [1 for z in signal["points"]]
-        if len(signal["points"]) > 1:
-            if len(signal["points"][0]) > 2:
-                size_multiplier = [z[2] for z in signal["points"]]
-        buys = go.Scatter(
-            x = [item[0] for item in buy_signals],
-            y = [item[1] for item in buy_signals],
-            # marker=dict(
-            # 	color = [item[2] for item in buy_signals]
-            # ),
-            name = "Buy Signals",
-            mode = "markers",
-            marker_size = [13 * s for s in size_multiplier]  
-        )
-        data.append(buys)
-
-    if sell_signals:
-        size_multiplier = [1 for z in signal["points"]]
-        if len(signal["points"]) > 1:
-            if len(signal["points"][0]) > 2:
-                size_multiplier = [z[2] for z in signal["points"]]
-        sells = go.Scatter(
-            x = [item[0] for item in sell_signals],
-            y = [item[1] for item in sell_signals],
-            name = "Sell Signals",
-            mode = "markers",
-            marker_size = [13 * s for s in size_multiplier]  
-        )
-        data.append(sells)
     
     return data
 

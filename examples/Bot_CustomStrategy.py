@@ -69,6 +69,12 @@ def customEntryStrategy(bot_controller, symbol):
 bot_config = {
     # Name of the bot, as stored in the database
     'name' : 'my_multi_timeframe_bot',
+    # 'db': {
+    #     'name' : 'lsls',
+    #     'type':'mysql',
+    #     'user':'auygd',
+    #     'pasword': 'dddd'
+    # },
 
     # exchange information (fill with your api key and secret)
     'exchange' : {
@@ -80,7 +86,7 @@ bot_config = {
     },
 
     # symbols to trade on
-    'symbols' : ['LINK/BTC', 'ETH/BTC'],
+    'symbols' : ['LINK/BTC', 'ETH/BTC', 'ADA/BTC'],
 
     # starting balance for bot
     'starting_balance' : 0.0005,
@@ -97,7 +103,7 @@ bot_config = {
     'entry_settings' : {
 
         # between 0 and 100, the % of the starting_balance to put in an order
-        'initial_entry_allocation': 100,
+        'initial_entry_allocation': 50,
 
         # number between 0 and 100 - 1% means that when we get a buy signal, 
         # we place buy order 1% below current price. if 0, we place a market 
