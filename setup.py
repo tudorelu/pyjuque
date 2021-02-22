@@ -6,7 +6,7 @@ with open("README.md", "r") as fh:
 setup(
 	name='pyjuque',
 	packages=find_packages(),
-	version='0.1.1.3',
+	version='0.1.1.4',
 	description="'Juju' Quant Engine for Python",
 	long_description=long_description,
 	long_description_content_type="text/markdown",
