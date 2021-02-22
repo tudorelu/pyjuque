@@ -1,5 +1,10 @@
 # CHANGES
 
+## 0.1.1.5
+
+### IMPROVEMENTS
+ - Backtester now returns lists with he entry and exit orders that can be passed directly to the plotter 
+
 ## 0.1.1.4
 
 ### FEATURES
