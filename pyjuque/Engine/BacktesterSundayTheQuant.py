@@ -189,6 +189,28 @@ class Backtester():
         if (self.winned + self.lossed) > 0:
             winrate = self.winned / (self.winned + self.lossed)
 
+                # PLOT BOT ENTRIES AND EXITS
+        entries = []
+        exits = []
+        # Update sizes of signals on plot
+        entry_sizes = [e[2] for e in self.entries]
+        exit_sizes = [e[2] for e in self.exits]
+        min_size = min(min(entry_sizes), min(exit_sizes))
+        max_size = max(max(entry_sizes), max(exit_sizes))
+        size_multiplier = 1
+        if max_size > 30:
+            size_multiplier = 100 / (max_size + min_size)
+        for res in self.entries:
+            res_clone = res.copy()
+            res_clone[2] = res_clone[2] * size_multiplier
+            entries.append(res_clone)
+        for res in self.exits:
+            res_clone = res.copy()
+            res_clone[2] = res_clone[2] * size_multiplier
+            exits.append(res_clone)
+        self.entries = entries
+        self.exits = exits
+
         results = {
             'balance_initial' : self.initial_balance,
             'balance_locked' : self.initial_balance - self.balance,
