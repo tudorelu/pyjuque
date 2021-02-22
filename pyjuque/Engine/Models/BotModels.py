@@ -100,8 +100,10 @@ class TABotModel(BaseBotModel):
     def getActivePairs(self, session):
         return session.query(PairModel).filter_by(bot_id=self.id, active=True).all()
 
-    def getPairWithSymbol(self, session, symbol):
-        return session.query(PairModel).filter_by(bot_id=self.id, symbol=symbol).first()
+    def getPair(self, session, symbol=None):
+        if symbol != None:
+            return session.query(PairModel).filter_by(bot_id=self.id, symbol=symbol).first()
+        return session.query(PairModel).filter_by(bot_id=self.id).first()
 
     def getFirstBuyOrder(self, session, position_id):
         return session.query(PairModel).filter_by(bot_id=self.id, position_id=position_id, side='BUY').first()

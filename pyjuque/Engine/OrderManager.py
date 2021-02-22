@@ -13,7 +13,7 @@ def placeNewOrder(exchange, symbol, pair=None, order=None, test_mode=True, order
     if not test_mode:
         new_order_response = placeOrderFromOrderModel(exchange, new_order_model)
     else:
-        new_order_response = dict(message='success')
+        new_order_response = dict(message='success', status='open', filled=0, side=new_order_model.side)
     exchange.updateSQLOrderModel(new_order_model, new_order_response, None)
     return new_order_model
 
@@ -35,7 +35,6 @@ def createOrderModel(symbol, test_mode, order_params, order):
     elif order is not None:
         position_id = order.position_id
         entry_price = order.entry_price
-
     new_order_model = Order(
         id = str(uuid4()).replace('-', ''),
         position_id = position_id,
@@ -81,7 +80,7 @@ def simulateOrderInfo(exchange, order, kline_interval):
     order_status = dict()
     new_last_checked_time = int(round(time.time() * 1000)) # time in ms
     time_diff = new_last_checked_time - order.last_checked_time
-    interval_in_ms = klineIntervalToMs(kline_interval)
+    interval_in_ms = exchange.ccxt.parse_timeframe(kline_interval)
     if  time_diff < interval_in_ms:
         candlestick_data = exchange.getOHLCV(order.symbol, kline_interval, 1)
     else:
@@ -90,33 +89,33 @@ def simulateOrderInfo(exchange, order, kline_interval):
             minimum_period, start_time=order.last_checked_time)
 
     for _, candle in candlestick_data.iterrows():
-        lowest_price = candle['low']
         if order.order_type == 'limit':
-            if lowest_price <= order.price:
+            if (order.side == 'buy' and candle['low'] < order.price) or \
+                (order.side == 'sell' and candle['high'] > order.price):
                 order_status['status'] = 'closed'
                 order_status['side'] = order.side
-                order_status['executedQty'] = order.original_quantity
+                order_status['filled'] = order.original_quantity
                 break
         elif order.order_type == 'market':
-            # not sure what to set this value to. 
-            # For now average of open and close of candle.
-            order.price = (candle['open'] + candle['close'])/2
+            order.price = candle['close']
             order_status['status'] = 'closed'
             order_status['side'] = order.side
-            order_status['executedQty'] = order.original_quantity
+            order_status['filled'] = order.original_quantity
             break
         elif order.order_type == 'stop_loss':
-            if lowest_price >= order.price:
+            if (order.side == 'sell' and candle['low'] < order.price) or \
+                (order.side == 'buy' and candle['high'] > order.price):
                 order_status['status'] = 'closed'
                 order_status['side'] = order.side
-                order_status['executedQty'] = order.original_quantity
+                order_status['filled'] = order.original_quantity
                 break
     if not order_status:
-        order_status['status'] = 'open'
+        order_status['status'] = order.status
         order_status['side'] = order.side
-        order_status['executedQty'] = 0
-
+        order_status['filled'] = order.executed_quantity
     order.last_checked_time = new_last_checked_time
+    # print('order_status is')
+    # pprint(order_status)
     return order_status
 
 
@@ -127,17 +126,4 @@ def cancelOrder(exchange, order):
     return exchange.cancelOrder(order.symbol, order.id, is_custom_id=True)
 
 
-def klineIntervalToMs(kline_interval:str):
-    number = int(kline_interval[:-1])
-    unit = kline_interval[-1]
-    if unit == 'm':
-        multiply_by = 1000 * 60
-    if unit =='h':
-        multiply_by = 1000 * 60 * 60
-    if unit == 'd':
-        multiply_by = 1000 * 60 * 60 * 24
-    if unit == 'w':
-        multiply_by = 1000 * 60 * 60 * 24 * 7
-    if unit == 'M':
-        multiply_by = 1000 * 60 * 60 * 24 * 31
-    return number * multiply_by
+# We replaced klineIntervalToMs to exchange.ccxt.parse_timeframe()

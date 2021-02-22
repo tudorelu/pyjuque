@@ -844,7 +844,6 @@ class Binance():
             else:
                 order.timestamp = datetime.fromtimestamp(
                     new_order_response['time']/1000)
-            
             # pprint(new_order_response)
             order.price = new_order_response['price']
             order.original_quantity =  Decimal(new_order_response['origQty'])

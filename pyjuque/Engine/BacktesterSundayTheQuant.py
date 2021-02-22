@@ -27,12 +27,6 @@ class Backtester():
         self.initial_entry_allocation = 100
         if params['entry_settings'].__contains__('initial_entry_allocation'):
             self.initial_entry_allocation = params['entry_settings']['initial_entry_allocation']
-        self.entry_on_longs = False
-        if params['entry_settings'].__contains__('entry_on_longs'):
-            self.entry_on_longs = params['entry_settings']['entry_on_longs']
-        self.entry_on_shorts = False
-        if params['entry_settings'].__contains__('entry_on_shorts'):
-            self.entry_on_shorts = params['entry_settings']['entry_on_shorts']
 
         self.take_profit = 1.05
         if params['exit_settings'].__contains__('take_profit'):
@@ -44,11 +38,11 @@ class Backtester():
         if params['exit_settings'].__contains__('trailing_stop_loss'):
             self.trailing_stop_loss = params['exit_settings']['trailing_stop_loss']
         self.exit_on_short = False
-        if params['exit_settings'].__contains__('exit_on_short'):
-            self.exit_on_short = params['exit_settings']['exit_on_short']
+        if params['exit_settings'].__contains__('exit_on_signal'):
+            self.exit_on_short = params['exit_settings']['exit_on_signal']
         self.exit_on_long = False
-        if params['exit_settings'].__contains__('exit_on_long'):
-            self.exit_on_long = params['exit_settings']['exit_on_long']
+        if params['exit_settings'].__contains__('exit_on_signal'):
+            self.exit_on_long = params['exit_settings']['exit_on_signal']
 
         self.strategy = params['strategy']['class'](**params['strategy']['params'])
 
@@ -106,9 +100,9 @@ class Backtester():
         if side == 'long':
             self.num_longs += 1
             # comment
-            if self.is_short_open and self.exit_on_long:
-                self.close_position(price)
-            elif self.is_long_open:
+            # if self.is_short_open and self.exit_on_long:
+            #     self.close_position(price)
+            if self.is_long_open:
                 self.long_open_price = (self.long_open_price + price)/2
                 self.amount += self.inv #* price
             else:
@@ -116,19 +110,19 @@ class Backtester():
                 self.long_open_price = price
                 self.amount = self.inv #* price
             self.entries.append([time, price, self.inv, self.inv / price]) #* price ])
-        elif side == 'short':
-            self.num_shorts += 1
-            # comment
-            if self.is_long_open and self.exit_on_short:
-                self.close_position(price)
-            elif self.is_short_open:
-                self.short_open_price = (self.short_open_price + price)/2
-                self.amount += self.inv #* price
-            else:
-                self.is_short_open = True
-                self.short_open_price = price
-                self.amount = self.inv #* price
-            self.entries.append([time, price, self.inv, self.inv / price ]) #* price ])
+        # elif side == 'short':
+        #     self.num_shorts += 1
+        #     # comment
+        #     if self.is_long_open and self.exit_on_short:
+        #         self.close_position(price)
+        #     elif self.is_short_open:
+        #         self.short_open_price = (self.short_open_price + price)/2
+        #         self.amount += self.inv #* price
+        #     else:
+        #         self.is_short_open = True
+        #         self.short_open_price = price
+        #         self.amount = self.inv #* price
+        #     self.entries.append([time, price, self.inv, self.inv / price ]) #* price ])
         self.balance -= self.inv
         self.open_positions += 1
         # self.amount = self.inv/price
@@ -142,10 +136,10 @@ class Backtester():
             result = self.amount * (price - self.long_open_price)
             self.is_long_open = False
             self.long_open_price = 0
-        elif self.is_short_open:
-            result = self.amount * (self.short_open_price - price)
-            self.is_short_open = False
-            self.short_open_price = 0
+        # elif self.is_short_open:
+        #     result = self.amount * (self.short_open_price - price)
+        #     self.is_short_open = False
+        #     self.short_open_price = 0
         self.profit.append(result)
         self.exits.append([time, price, self.amount, self.amount / price])
         # print('closing position! {}, {} amount was {}'.format(time, price, self.amount))
@@ -168,8 +162,8 @@ class Backtester():
         # tp_short = self.params['tp_short']
         if self.is_long_open:
             self.take_profit_price = price * tp_long
-        elif self.is_short_open:
-            self.take_profit_price = price * tp_short
+        # elif self.is_short_open:
+        #     self.take_profit_price = price * tp_short
 
 
     def set_stop_loss(self, price, sl_long = 0.99, sl_short = 1.01):
@@ -178,8 +172,8 @@ class Backtester():
         # sl_short = self.params['sl_short']
         if self.is_long_open:
             self.stop_loss_price = price * sl_long
-        if self.is_short_open:
-            self.stop_loss_price = price * sl_short
+        # if self.is_short_open:
+        #     self.stop_loss_price = price * sl_short
 
 
     def return_results(self):
@@ -242,32 +236,32 @@ class Backtester():
                     self.close_position(price = self.take_profit_price, time = time[i])
                 elif low[i] <= self.stop_loss_price:
                     self.close_position(price = self.stop_loss_price, time = time[i])
-            elif self.is_short_open:
-                if self.exit_on_long and long_signal:
-                    self.close_position(price = close[i], time = time[i])
-                elif high[i] >= self.stop_loss_price:
-                    self.close_position(price = self.stop_loss_price, time = time[i])
-                elif low[i] <= self.take_profit_price:
-                    self.close_position(price = self.take_profit_price, time = time[i])
-            
+            # elif self.is_short_open:
+            #     if self.exit_on_long and long_signal:
+            #         self.close_position(price = close[i], time = time[i])
+            #     elif high[i] >= self.stop_loss_price:
+            #         self.close_position(price = self.stop_loss_price, time = time[i])
+            #     elif low[i] <= self.take_profit_price:
+            #         self.close_position(price = self.take_profit_price, time = time[i])
+                
+            if self.balance > 0:
+                # Open New Trades If We Received Signals
+                if long_signal:
+                    self.open_position(price = close[i], time = time[i], side = 'long', from_opened = i)
+                    self.set_take_profit(price = close[i], tp_long = self.take_profit)
+                    self.set_stop_loss(price = close[i], sl_long = self.stop_loss_value)
+                # elif short_signal:
+                #     self.open_position(price = close[i], time = time[i], side = 'short', from_opened = i)
+                #     self.set_take_profit(price = close[i], tp_short = self.take_profit)
+                #     self.set_stop_loss(price = close[i], sl_short = self.stop_loss_value)
+                        
             # Update Trailing Stop Loss If Available
-            if self.trailing_stop_loss and (self.is_long_open or self.is_short_open):
+            if self.trailing_stop_loss and (self.is_long_open): # or self.is_short_open):
                 new_max = high[self.from_opened : i].max()
                 previous_stop_loss = self.stop_loss_price
                 self.set_stop_loss(price = new_max)
                 if previous_stop_loss > self.stop_loss_price:
                     self.stop_loss_price = previous_stop_loss
-            
-            if self.balance > 0:
-                # Open New Trades If We Received Signals
-                if long_signal and self.entry_on_longs:
-                    self.open_position(price = close[i], time = time[i], side = 'long', from_opened = i)
-                    self.set_take_profit(price = close[i], tp_long = self.take_profit)
-                    self.set_stop_loss(price = close[i], sl_long = self.stop_loss_value)
-                elif short_signal and self.entry_on_shorts:
-                    self.open_position(price = close[i], time = time[i], side = 'short', from_opened = i)
-                    self.set_take_profit(price = close[i], tp_short = self.take_profit)
-                    self.set_stop_loss(price = close[i], sl_short = self.stop_loss_value)
                 
 
         self.first_price = close[0]
@@ -279,11 +273,11 @@ class Backtester():
         for entry in self.entries:
             if entry[0] > last_exit[0]:
                 remaining_amount += entry[2]
-                unrealised_profits += entry[1] * entry[2]
+                unrealised_profits += entry[2] / entry[1]
                 locked_trades += 1
         # self.locked_in_trades = remaining_amount 
         self.last_price = last_price
         self.locked_trades = locked_trades
-        self.unrealised_profits = (remaining_amount * last_price - unrealised_profits) #/ last_price
+        self.unrealised_profits = (remaining_amount / last_price - unrealised_profits) #/ last_price
         
 

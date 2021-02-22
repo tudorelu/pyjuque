@@ -29,6 +29,7 @@ def customEntryStrategy(bot_controller, symbol):
 ## Defines the overall configuration of the bot 
 bot_config = {
     'name' : 'my_bot',
+    'test_run' : False                    # set to True to run in simulation mode
     'exchange' : {
         'name' : 'binance',
         'params' : {                      # put here any param that ccxt accepts

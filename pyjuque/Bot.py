@@ -24,7 +24,7 @@ import functools
 #     'quote_asset': 'BTC',
 #     'entry_strategy': {
 #         'name': 'BBRSIStrategy',
-#         'function' : None,
+#         'class' : None,
 #         'params': {
 #             'rsi_len' : 8,
 #             'bb_len' : 100,
@@ -67,6 +67,7 @@ def defineBot(bot_config):
         symbol_quote = symbol.split('/')[1]
         assert quote_asset == symbol_quote, 'All pairs must be trading against the same' + \
             ' asset, but in this case they don\'t: {}, {}'.format(init_symbol, symbol)
+    bot_config['quote_asset'] = quote_asset
 
     if not bot_config.__contains__('db_url'):
         bot_config['db_url'] = 'sqlite:///{}.db'.format(bot_config['name'])
@@ -89,6 +90,9 @@ def _defineTaBot(bot_config):
         return _defineTaBot(bot_config)
 
     # print('Bot model before init bot_controller', bot_model)
+    timeframe = '5m'
+    if bot_config.__contains__('timeframe'):
+        timeframe = bot_config['timeframe']
     bot_controller = BotController(session, bot_model, exchange, None)
     if bot_config.__contains__('display_status'):
         if bot_config['display_status']:
@@ -116,8 +120,8 @@ def _defineTaBot(bot_config):
             bot_controller.checkEntryStrategy = functools.partial(entry_function, bot_controller)
             bot_controller.checkExitStrategy = functools.partial(exit_function, bot_controller)
 
-        if not found and bot_config['strategy'].__contains__('function'):
-            bot_controller.strategy = bot_config['strategy']['function'](**bot_config['strategy']['params'])
+        if not found and bot_config['strategy'].__contains__('class'):
+            bot_controller.strategy = bot_config['strategy']['class'](**bot_config['strategy']['params'])
     
     return bot_controller
 
@@ -147,8 +151,8 @@ def _defineTaBot(bot_config):
 
 #     strategy = None
 #     if bot_config.__contains__('entry_strategy'):
-#         if bot_config.__contains__('function'):
-#             strategy = bot_config['entry_strategy']['function'](**bot_config['entry_strategy']['params'])
+#         if bot_config.__contains__('class'):
+#             strategy = bot_config['entry_strategy']['class'](**bot_config['entry_strategy']['params'])
 
 #     bot_controller = None
 #     if bot_type == 'ta':

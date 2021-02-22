@@ -80,12 +80,12 @@ class CcxtExchange():
         args = dict()
         if custom_id:
             args['clientOrderId'] = custom_id
-        try:
-            order = self.ccxt.createOrder(
-                symbol=symbol, type='market', side=side, 
-                amount=amount, price=None, params=args)
-        except:
-            return None    
+        # try:
+        order = self.ccxt.createOrder(
+            symbol=symbol, type='market', side=side, 
+            amount=amount, price=None, params=args)
+        # except:
+        #     return None    
         return order
 
 
@@ -96,12 +96,12 @@ class CcxtExchange():
         args = dict()
         if custom_id:
             args['clientOrderId'] = custom_id
-        try:
-            order = self.ccxt.createOrder(
-                symbol=symbol, type='limit', side=side, 
-                amount=amount, price=price, params=args)
-        except:
-            return None
+        # try:
+        order = self.ccxt.createOrder(
+            symbol=symbol, type='limit', side=side, 
+            amount=amount, price=price, params=args)
+        # except:
+        #     return None
         return order
 
 
@@ -163,21 +163,21 @@ class CcxtExchange():
         if is_custom_id:
             params['clientOrderId'] = order_id
         if self.exchange_id == 'binance':
-            try:
-                order = self.ccxt.cancelOrder(order_id, symbol, params)
-            except:
-                return None
+            # try:
+            order = self.ccxt.cancelOrder(order_id, symbol, params)
+            # except:
+            #     return None
         elif self.exchange_id == 'okex':
-            try:
-                data = self.ccxt.spotPostCancelBatchAlgos(
-                    {
-                        'instrument_id':'ETH-BTC', 
-                        'algo_ids':[order_id], 
-                        'order_type':'1'
-                    })
-                order = data
-            except:
-                return None
+            # try:
+            data = self.ccxt.spotPostCancelBatchAlgos(
+                {
+                    'instrument_id':'ETH-BTC', 
+                    'algo_ids':[order_id], 
+                    'order_type':'1'
+                })
+            order = data
+            # except:
+            #     return None
         else:
             raise NotImplementedError('Getting algo orders not implemented for {}'.format(self.exchange_id))
         # print('Canceling algo order for {} returned'.format(self.exchange_id))
@@ -250,6 +250,12 @@ class CcxtExchange():
         if order.is_test:
             if order.side == 'buy':
                 order.entry_price = order.price
+            if order_response['filled'] is not None:
+                order.executed_quantity =  Decimal(order_response['filled'])
+            if order_response['status'] is not None:
+                order.status = order_response['status']
+            if order_response['side'] is not None:
+                order.side = order_response['side']
         if not order.is_test:
             if order_response['timestamp'] is not None:
                 order.timestamp = datetime.fromtimestamp(

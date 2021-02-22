@@ -92,7 +92,7 @@ bot_config = {
     # this bot places an entry order when the 'checkLongSignal' function of 
     # the strategy below retruns true
     'strategy': {
-        'function': BBRSIStrategy,
+        'class': BBRSIStrategy,
         'params': {
             'rsi_len' : 8, 
             'bb_len' : 100, 

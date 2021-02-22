@@ -6,7 +6,7 @@ def InitializeDatabaseTaBot(session, params={}):
     by creating a bot with two pairs. """
     name = 'My Bot'
     symbols = []
-    quote_asset = 'BTC'
+    quote_asset = None
     starting_balance = 0.001
     test_run = False
     initial_entry_allocation = 25
