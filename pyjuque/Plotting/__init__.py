@@ -311,6 +311,8 @@ def PlotData(df,
 
     if save_plot or show_plot:
         file_path = os.path.abspath('graphs')
+        if not os.path.exists(file_path):
+            os.makedirs(file_path)
         plot(fig, filename=os.path.join(file_path, plot_title+'.html'), auto_open=show_plot)
 
     return fig
