@@ -43,12 +43,11 @@ class Backtester():
         self.exit_on_long = False
         if params['exit_settings'].__contains__('exit_on_signal'):
             self.exit_on_long = params['exit_settings']['exit_on_signal']
+        self.sell_on_end = False
+        if params['exit_settings'].__contains__('sell_on_end'):
+            self.sell_on_end = params['exit_settings']['sell_on_end']
 
         self.strategy = params['strategy']['class'](**params['strategy']['params'])
-
-        self.sell_on_end = False
-        if 'sell_on_end' in params:
-            self.sell_on_end = params['sell_on_end']
 
         self.amount = 0
         self.fee_cost = 0.1 / 100
