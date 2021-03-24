@@ -43,6 +43,9 @@ class Backtester():
         self.exit_on_long = False
         if params['exit_settings'].__contains__('exit_on_signal'):
             self.exit_on_long = params['exit_settings']['exit_on_signal']
+        self.sell_on_end = False
+        if params['exit_settings'].__contains__('sell_on_end'):
+            self.sell_on_end = params['exit_settings']['sell_on_end']
 
         self.strategy = params['strategy']['class'](**params['strategy']['params'])
 
@@ -285,6 +288,15 @@ class Backtester():
                 if previous_stop_loss > self.stop_loss_price:
                     self.stop_loss_price = previous_stop_loss
                 
+        if (len(self.entries) > len(self.exits)) and self.sell_on_end:
+            self.close_position(price = close[i], time = time[i])
+
+        if (len(self.entries) == 0) or (len(self.exits) == 0):
+            raise ValueError("""
+            Not enough data for computing profits. Either your long or short signal wasn't triggered.
+            Please check your strategies and try again. If you have at least one entry but no exits,
+            you can force a full sell on the end by setting 'sell_on_end' to True on your bot config.
+            (Total entries: {} / Total exits: {})""".format(len(self.entries), len(self.exits)))
 
         self.first_price = close[0]
         last_price = close[len(close) - 1]
