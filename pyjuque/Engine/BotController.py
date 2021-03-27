@@ -330,34 +330,40 @@ class BotController:
         if quantity > 0:
             price = None
             stop_price = None
-            # exit_signal, last_price = self.checkExitStrategy(order.symbol)
-            # if self.bot_model.exit_settings.exit_on_signal and exit_signal:
-            #     order_type = 'market'
-            #     side = 'sell'
-            # else:
-            last_price = order.price
-            stop_loss_value = self.bot_model.exit_settings.stop_loss_value 
-            profit_target = self.bot_model.exit_settings.profit_target
-            if profit_target is not None:
-                price = Decimal(last_price) * Decimal((100 + profit_target) / 100)
-                order_type = 'limit'
+            exit_signal, last_price = self.checkExitStrategy(order.symbol)
+            place_trade = False
+            if self.bot_model.exit_settings.exit_on_signal and exit_signal:
+                order_type = 'market'
                 side = 'sell'
-                if stop_loss_value is not None:
-                    stop_price = Decimal(last_price) * Decimal((100 - stop_loss_value) / 100)
-            elif stop_loss_value is not None:
-                price = Decimal(last_price) * Decimal((100 - stop_loss_value) / 100)
-                order_type = 'stop_loss'
-                side = 'sell'
-            self.placeOrder(
-                symbol=order.symbol, 
-                pair=pair, 
-                order=order, 
-                price=price,
-                entry_price=order.price, 
-                stop_price=stop_price,
-                quantity=quantity, 
-                side=side, 
-                order_type=order_type)
+                place_trade = True
+            else:
+                last_price = order.price
+                stop_loss_value = self.bot_model.exit_settings.stop_loss_value 
+                profit_target = self.bot_model.exit_settings.profit_target
+                if profit_target is not None:
+                    price = Decimal(last_price) * Decimal((100 + profit_target) / 100)
+                    order_type = 'limit'
+                    side = 'sell'
+                    place_trade = True
+                    if stop_loss_value is not None:
+                        stop_price = Decimal(last_price) * Decimal((100 - stop_loss_value) / 100)
+                elif stop_loss_value is not None:
+                    price = Decimal(last_price) * Decimal((100 - stop_loss_value) / 100)
+                    order_type = 'stop_loss'
+                    side = 'sell'
+                    place_trade = True
+            # If trade can go through
+            if place_trade:
+                self.placeOrder(
+                    symbol=order.symbol, 
+                    pair=pair, 
+                    order=order, 
+                    price=price,
+                    entry_price=order.price, 
+                    stop_price=stop_price,
+                    quantity=quantity, 
+                    side=side, 
+                    order_type=order_type)
 
 
     def instantlyExitOrder(self, order, pair):

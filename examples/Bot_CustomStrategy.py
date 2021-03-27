@@ -56,7 +56,8 @@ def customEntryStrategy(bot_controller, symbol):
     # Check entry signal on each timeframe separately
     entry_signal_15 = df_15min.iloc[-1]['EMA_50'] > df_15min.iloc[-1]['EMA_20']
     entry_signal_1h = df_1hour.iloc[-1]['EMA_50'] > df_1hour.iloc[-1]['EMA_20']
-    entry_signal_4h = df_4hour.iloc[-1]['EMA_50'] > df_1hour.iloc[-1]['EMA_20']
+    entry_signal_4h = df_4hour.iloc[-1]['EMA_50'] > df_1hour.iloc[-1]['EMA_20'] and \
+        df_4hour.iloc[-2]['EMA_50'] < df_1hour.iloc[-2]['EMA_20']
 
     # Combine them
     entry_signal = entry_signal_15 and entry_signal_1h and entry_signal_4h
@@ -69,12 +70,6 @@ def customEntryStrategy(bot_controller, symbol):
 bot_config = {
     # Name of the bot, as stored in the database
     'name' : 'my_multi_timeframe_bot',
-    # 'db': {
-    #     'name' : 'lsls',
-    #     'type':'mysql',
-    #     'user':'auygd',
-    #     'pasword': 'dddd'
-    # },
 
     # exchange information (fill with your api key and secret)
     'exchange' : {
@@ -122,10 +117,7 @@ bot_config = {
         # stop loss value in percent - 10% means stop loss at 10% below our 
         # buy order's filled price
         'stop_loss_value': 10
-    },
-
-    # will the bot display its status / current performing action in the terminal
-    'display_status' : True
+    } ,
 }
 
 

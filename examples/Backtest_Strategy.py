@@ -106,28 +106,29 @@ def Main():
     
     # For the backtester, we initialise the exchange 
     exchange = CcxtExchange('kucoin')
-    # and download the data
-    df = exchange.getOHLCV('BTC/USDT', '1m', 1000)
-
     # we then initialize the backtester using the config dict
     bt = Backtester(bot_config)
-    # and run it on the data downloaded before
-    bt.backtest(df)
 
-    # we then retreive and print the results
-    results = bt.return_results()
-    pprint(results)
-    
-    # and we also Plot OHLCV, indicators & signals
-    PlotData(df, 
-        plot_indicators=[
-            dict(name = 'slow_ma', title = 'SLOW HMA'),
-            dict(name = 'fast_ma', title = 'FAST HMA'),
-        ],
-        signals=[
-            dict(name = 'entry orders', points = bt.entries), 
-            dict(name = 'exit orders', points = bt.exits),
-        ], show_plot=True)
+    for symbol in bot_config['symbols']:
+        # and download the data
+        df = exchange.getOHLCV(symbol, '1m', 1000)
+        # and run it on the data downloaded before
+        bt.backtest(df)
+        # we then retreive and print the results
+        results = bt.return_results()
+        print(symbol)
+        pprint(results)
+        
+        # and we also Plot OHLCV, indicators & signals
+        PlotData(df, 
+            plot_indicators=[
+                dict(name = 'slow_ma', title = 'SLOW HMA'),
+                dict(name = 'fast_ma', title = 'FAST HMA'),
+            ],
+            signals=[
+                dict(name = 'entry orders', points = bt.entries), 
+                dict(name = 'exit orders', points = bt.exits),
+            ], title=symbol, show_plot=True)
 
 
 if __name__ == '__main__':

@@ -1,5 +1,11 @@
 # CHANGES
 
+## 0.1.1.6
+
+### IMPROVEMENTS
+ - Added ability to exit on [custom signal](./examples/Bot_CustomEntryExitStrategy.py#128). 
+
+
 ## 0.1.1.5
 
 ### IMPROVEMENTS
