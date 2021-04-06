@@ -300,15 +300,17 @@ class Backtester():
 
         self.first_price = close[0]
         last_price = close[len(close) - 1]
-        last_exit = self.exits[len(self.exits) - 1]
+        
         remaining_amount = 0
         unrealised_profits = 0
         locked_trades = 0
-        for entry in self.entries:
-            if entry[0] > last_exit[0]:
-                remaining_amount += entry[2]
-                unrealised_profits += entry[2] / entry[1]
-                locked_trades += 1
+        if len(self.exits) > 0:
+            last_exit = self.exits[len(self.exits) - 1]
+            for entry in self.entries:
+                if entry[0] > last_exit[0]:
+                    remaining_amount += entry[2]
+                    unrealised_profits += entry[2] / entry[1]
+                    locked_trades += 1
         # self.locked_in_trades = remaining_amount 
         self.last_price = last_price
         self.locked_trades = locked_trades
