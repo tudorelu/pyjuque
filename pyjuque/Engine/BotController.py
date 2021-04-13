@@ -184,7 +184,10 @@ class BotController:
             # sell order was accepted by engine of exchange
             if (order.status == 'open'):
                 self.log('OPEN SELL order on {}, UPDATING.'.format(order.symbol))
-                self.updateOpenSellOrder(order, pair)
+                try:
+                    self.updateOpenSellOrder(order, pair)
+                except:
+                    print('Error trying to update open sell order on {} with id {}'.format(order.symbol, order.id))
             # sell order was rejected by engine of exchange
             if (order.status == 'rejected'):
                 self.log('REJECTED SELL order on {}.'.format(order.symbol))
@@ -260,7 +263,7 @@ class BotController:
         exit_signal, last_price = self.checkExitStrategy(order.symbol)
         side = 'sell'
         order_type = 'market'
-        if (stop_loss_value != None and (order.stop_price > current_price)) or \
+        if (stop_loss_value != None and (order.stop_price != None and order.stop_price > current_price)) or \
             (self.bot_model.exit_settings.exit_on_signal and exit_signal):
             quantity = self.computeMatchingOrderQuantity(order)
             if not self.test_mode:

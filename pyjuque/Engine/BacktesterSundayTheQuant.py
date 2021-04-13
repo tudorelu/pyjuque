@@ -83,6 +83,8 @@ class Backtester():
         self.amount = 0
         self.profit = []
         self.drawdown = []
+        self.entries = []
+        self.exits = []
         self.winned = 0
         self.lossed = 0
         self.num_operations = 0
@@ -134,11 +136,13 @@ class Backtester():
 
 
     def close_position(self, price, time):
-        self.num_operations += 1
         if self.is_long_open:
             result = self.amount * (price - self.long_open_price)
             self.is_long_open = False
             self.long_open_price = 0
+        else:
+            return
+        self.num_operations += 1
         # elif self.is_short_open:
         #     result = self.amount * (self.short_open_price - price)
         #     self.is_short_open = False
@@ -288,19 +292,20 @@ class Backtester():
                 if previous_stop_loss > self.stop_loss_price:
                     self.stop_loss_price = previous_stop_loss
                 
-        if (len(self.entries) > len(self.exits)) and self.sell_on_end:
+        if (len(self.entries) > len(self.exits)) and self.is_long_open and self.sell_on_end:
             self.close_position(price = close[i], time = time[i])
 
         if (len(self.entries) == 0) or (len(self.exits) == 0):
             raise ValueError("""
-            Not enough data for computing profits. Either your long or short signal wasn't triggered.
-            Please check your strategies and try again. If you have at least one entry but no exits,
-            you can force a full sell on the end by setting 'sell_on_end' to True on your bot config.
-            (Total entries: {} / Total exits: {})""".format(len(self.entries), len(self.exits)))
+                Not enough data for computing profits. Either your long or short signal wasn't triggered.
+                Please check your strategies and try again. If you have at least one entry but no exits,
+                you can force a full sell on the end by setting 'sell_on_end' to True in the exit_settings
+                of your bot config. (Total entries: {} / Total exits: {})""".format(
+                    len(self.entries), len(self.exits)))
 
         self.first_price = close[0]
         last_price = close[len(close) - 1]
-        
+
         remaining_amount = 0
         unrealised_profits = 0
         locked_trades = 0
