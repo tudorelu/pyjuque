@@ -235,8 +235,8 @@ class Backtester():
             'n_long' : self.num_longs,
             'n_shorts': self.num_shorts,
             'n_locked_trades': self.locked_trades,
-            'winned' : self.winned,
-            'lossed' : self.lossed,
+            'n_profitable_trades' : self.winned,
+            'n_losing_trades' : self.lossed,
             'winrate' : winrate
         }
         # results['fitness_function'] = ( ( profit - abs(drawdown) ) * winrate) / self.num_operations

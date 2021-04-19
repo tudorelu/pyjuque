@@ -1,5 +1,11 @@
 # CHANGES
 
+## 0.1.1.7
+
+### BUG FIXES
+ - Fixed Backtester
+ - Fixed bug that occured sometimes when exiting from signal 
+
 ## 0.1.1.6
 
 ### IMPROVEMENTS

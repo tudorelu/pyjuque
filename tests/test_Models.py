@@ -222,9 +222,9 @@ class TestBot(unittest.TestCase):
         self.assertEqual(eth_btc_pair.current_order_id, None)
         self.assertEqual(eth_btc_pair.profit_loss, self.profit_loss_eth)
 
-    def test_getPairWithSymbol(self):
+    def test_getPair(self):
         """ test getPairWithSymbol method """
-        eth_btc_pair = self.bot.getPairWithSymbol(self.session, self.symbol_eth)
+        eth_btc_pair = self.bot.getPair(self.session, self.symbol_eth)
 
         # check if ethbtc pair was stored correctly
         self.assertEqual(eth_btc_pair.id, self.pair_id_eth)
