@@ -68,7 +68,9 @@ class BotController:
             df = self.exchange.getOHLCV(symbol, self.kline_interval, self.strategy.minimum_period)
         except Exception as e:
             self.log('Error getting data from the exchange for {}:'.format(symbol))
-            self.logError(sys.exc_info())
+            self.logError(sys.exc_info()[0])
+            self.logError(sys.exc_info()[1])
+            self.logError(sys.exc_info()[2])
             return False, None
         try:
             self.strategy.setUp(df)
@@ -76,7 +78,9 @@ class BotController:
             last_price = df.iloc[-1]['close']
         except Exception as e:
             self.log('Error computing indicators for {}:'.format(symbol))
-            self.logError(sys.exc_info())
+            self.logError(sys.exc_info()[0])
+            self.logError(sys.exc_info()[1])
+            self.logError(sys.exc_info()[2])
             return False, None
         return entry_signal, last_price
 
@@ -127,14 +131,18 @@ class BotController:
             except Exception as e:
                 self.log('Error getting data from the exchange for'
                     ' updating open order on {}.'.format(order.symbol))
-                self.logError(sys.exc_info())
+                self.logError(sys.exc_info()[0])
+                self.logError(sys.exc_info()[1])
+                self.logError(sys.exc_info()[2])
                 return
         else:
             try:
                 exchange_order_info = simulateOrderInfo(self.exchange, order, self.kline_interval)
             except Exception as e:
                 self.log('Error simulating open order on {}.'.format(order.symbol))
-                self.logError(sys.exc_info())
+                self.logError(sys.exc_info()[0])
+                self.logError(sys.exc_info()[1])
+                self.logError(sys.exc_info()[2])
                 return
         self.exchange.updateSQLOrderModel(order, exchange_order_info, None)
         self.session.commit()
@@ -255,7 +263,9 @@ class BotController:
         except Exception:
             self.log('Error getting data from the exchange '
                 'for updating open sell order on {}:'.format(pair.symbol))
-            self.logError(sys.exc_info())
+            self.logError(sys.exc_info()[0])
+            self.logError(sys.exc_info()[1])
+            self.logError(sys.exc_info()[2])
             return
         current_price = Decimal(candlestick_data.iloc[-1]['close'])
         stop_loss_value = self.bot_model.exit_settings.stop_loss_value
@@ -312,7 +322,9 @@ class BotController:
             df = self.exchange.getOHLCV(symbol, self.kline_interval, self.strategy.minimum_period)
         except Exception:
             self.log('Error getting data from the exchange for {}:'.format(symbol))
-            self.logError(sys.exc_info())
+            self.logError(sys.exc_info()[0])
+            self.logError(sys.exc_info()[1])
+            self.logError(sys.exc_info()[2])
             return False, None
         try:
             self.strategy.setUp(df)
@@ -320,7 +332,9 @@ class BotController:
             last_price = df.iloc[-1]['close']
         except Exception as e:
             self.log('Error computing indicators for {}:'.format(symbol))
-            self.logError(sys.exc_info())
+            self.logError(sys.exc_info()[0])
+            self.logError(sys.exc_info()[1])
+            self.logError(sys.exc_info()[2])
             return False, None
         return exit_signal, last_price
 
@@ -405,7 +419,9 @@ class BotController:
                 self.exchange, symbol, pair, order, self.bot_model.test_run, order_params)
         except Exception as e:
             self.log('Error placing order for {}:'.format(symbol))
-            self.logError(sys.exc_info())
+            self.logError(sys.exc_info()[0])
+            self.logError(sys.exc_info()[1])
+            self.logError(sys.exc_info()[2])
         if new_order_model != None:
             self.syncModels(pair, order, new_order_model)
             self.session.add(new_order_model)

@@ -231,7 +231,6 @@ class CreateOrderBookThread(threading.Thread):
 
 class OrderBook():
   def __init__(self, symbols, onUpdate=None, msUpdate=False):
-
     self.symbols = symbols
     self.onUpdate = onUpdate
     self.msUpdate = msUpdate
@@ -241,25 +240,20 @@ class OrderBook():
     msg = "Creating order books holding {} symbols."\
       .format(len(self.symbols))
     print(msg)
-    
     for symbol in self.symbols:
       buffered_events[symbol] = []
       order_book_initialized[symbol] = False
-
     streams = []
     if self.msUpdate:
       streams = [ symbol.replace('/', '').lower()+"@depth@100ms" for symbol in self.symbols ]
     else:
       streams = [ symbol.replace('/', '').lower()+"@depth" for symbol in self.symbols ]
-    
     socket_url = "wss://stream.binance.com:9443/stream?streams=" + \
       '/'.join(streams)
-    
     update_order_book_thread = UpdateOrderBookThread(
       "UpdateOrderBook", socket_url, self.onUpdate)
     create_order_book_thread = CreateOrderBookThread(
       "CreateOrderBook", exchange, self.symbols)
-    
     update_order_book_thread.start()
     create_order_book_thread.start()
 
@@ -278,11 +272,8 @@ class OrderBook():
     ws.close()
 
   def subscribeToSymbol(self, symbol):
-
     global ws, exchange, order_book_initialized, buffered_events
-
     speed = "100ms" if self.msUpdate else ""
-    
     msg = {
         "method": "SUBSCRIBE",
         "params":
@@ -291,22 +282,16 @@ class OrderBook():
         ],
         "id": 1
     }
-
     ws.send(json.dumps(msg))
-
     buffered_events[symbol] = []
     order_book_initialized[symbol] = False
-
     create_order_book_thread = CreateOrderBookThread(
       "CreateOrderBook_{}".format(symbol), exchange, [symbol])
-    
     create_order_book_thread.start()
 
   def unsubscribeFromSymbol(self, symbol):
     global ws
-
     speed = "100ms" if self.msUpdate else ""
-    
     msg = {
         "method": "UNSUBSCRIBE",
         "params":
@@ -315,7 +300,6 @@ class OrderBook():
         ],
         "id": 2
     }
-
     ws.send(json.dumps(msg))
 
 
@@ -324,6 +308,7 @@ class OrderBook():
     if we wanted to trade `quantity` of that `symbol`, based on its order book"""
     global order_book
     initial_quantity = quantity
+
     symbol_order_book = order_book[symbol]
     order_book_side = symbol_order_book['asks'] \
       if side == 'buy' else symbol_order_book['bids']
@@ -333,16 +318,13 @@ class OrderBook():
 
     qtdif = Decimal('1')
     while qtdif > Decimal('0'):
-      try:
-        order = order_book_side[i]
-      except IndexError:
-        raise Exception("There are not enough orders in the Order Book.")
+      order = order_book_side[i]
       if is_quote_quantity:
-        qty = min(order[1] * order[0], quantity - accounted_for_quantity)
+        qty = min(Decimal(order[1]) * Decimal(order[0]), quantity - accounted_for_quantity)
       else:
-        qty = min(order[1], quantity - accounted_for_quantity)
+        qty = min(Decimal(order[1]), quantity - accounted_for_quantity)
       
-      price += (order[0] * qty)
+      price += (Decimal(order[0]) * qty)
       accounted_for_quantity += Decimal(qty)
       qtdif = abs(quantity - accounted_for_quantity)
       i += 1
