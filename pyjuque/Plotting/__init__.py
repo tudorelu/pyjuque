@@ -307,7 +307,7 @@ def PlotData(df,
         layout.update(shapes=layout['shapes'].__add__(tuple(plot_shapes)))
 
     # style and display
-    fig = go.Figure(data = data, layout = layout)
+    fig = go.FigureWidget(data = data, layout = layout)
 
     if save_plot or show_plot:
         file_path = os.path.abspath('graphs')
