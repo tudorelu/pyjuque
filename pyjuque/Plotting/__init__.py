@@ -180,7 +180,8 @@ def PlotData(df,
     regimes_number=None,
     trends=False,
     save_plot=False,
-    show_plot=False,
+    show_plot=False,         
+    use_figure_widget=False,
     plot_title:str="Unnamed"):
     '''
     Creates a plotly plot based on the options provided - which can be displayed
@@ -307,8 +308,11 @@ def PlotData(df,
         layout.update(shapes=layout['shapes'].__add__(tuple(plot_shapes)))
 
     # style and display
-    fig = go.FigureWidget(data = data, layout = layout)
-
+    if use_figure_widget:
+        fig = go.FigureWidget(data = data, layout = layout)
+    else:
+        fig = go.Figure(data = data, layout = layout)
+    
     if save_plot or show_plot:
         file_path = os.path.abspath('graphs')
         if not os.path.exists(file_path):
