@@ -5,17 +5,117 @@
 This project implements the basic functionality required to engage in algorithmic trading. It can be regarded as a starting point for more complex trading bots.
 
 ## Installation
+
+<details>
+ <summary> Expand installation details. </summary>
+
+<br/>
 Make sure you have pip installed. Run:
 
 ```sh
 pip install pyjuque
 ```
+Should be good to go! Now check out the example section. 
+</details>
 
-You should be good to go! Check out the example section. 
+## Examples
 
-## Getting Started
+Checkout these examples to get started stratght away: [strategy 1](/examples/Bot_CustomStrategy.py), [strategy 2](/examples/Bot_StrategyFromTemplate.py). Below are the simplest scripts on how to get started with pyjuque (just code, with comments). Read the next section to understand the thinking behind them.
 
-Checkout these examples to get started stratght away: [strategy 1](/examples/Bot_CustomStrategy.py), [strategy 2](/examples/Bot_StrategyFromTemplate.py). Below is the simplest example of how to get started with pyjuque. Read the next section to understand the thinking behind it.
+<details>
+ <summary> Backtesting a Strategy. </summary>
+
+```py
+# Import the Strategy template
+from pyjuque.Strategies import StrategyTemplate
+# Import the CcxtWrapper to connect to a cryptocurrency exchange (data provider)
+from pyjuque.Exchanges.CcxtExchange import CcxtExchange
+# Import the Backtester class
+from pyjuque.Backtester import Backtester
+
+# Define Momentum Strategy
+class MomentumStrategy(StrategyTemplate):
+    ### If the last `momentum_period` candles are monotonically increasing, 
+    ### it is a long signal, and if they are monotonically decreasing 
+    ### it's a short signal.
+    def __init__(self, momentum_period=3):
+        if momentum_period < 1:
+            raise ValueError("momentum_period should be greater than 1.")
+        self.momentum_period = momentum_period
+        self.minimum_period = max(100, momentum_period)
+
+    # this function computes all long and short signals
+    # that happened on this dataframe (df) 
+    def setUp(self, df):
+        # the signals on the first `momentum_period` candles are false
+        # because we don't have enough data yet to compute
+        long_signals = [0] * self.momentum_period
+        short_signals = [0] * self.momentum_period
+        l_df = len(df)
+        close = df['close']
+        # for the rest of the candles check out if they were monotonically 
+        # increasing or decreasing
+        for i in range(self.momentum_period, l_df):
+            all_increasing = True
+            all_decreasing = True
+            # Go through the last 'momentum_period' candles 
+            # to see if they're all increasing, decreasing, or not
+            for j in range(i + 1 - self.momentum_period, i + 1):
+                all_increasing = all_increasing and (close[j] > close[j-1])
+                all_decreasing = all_decreasing and (close[j] < close[j-1])
+            # if they're all increasing it's a long signal
+            long_signals.append(int(all_increasing))
+            # if they're all decreasing it's a short signal
+            short_signals.append(int(all_decreasing))
+        self.long_signals = long_signals
+        self.short_signals = short_signals
+        self.dataframe = df
+
+    # the bot will call this function with the latest data and if this 
+    # returns 1, our bot will place a long order
+    def checkLongSignal(self, i = None):
+        return self.long_signals[i], None
+
+    # if your exit settings contain 'exit on signal', the bot will exit if it 
+    # currently has an open order and it receives a short signal 
+    # (IE this function returns 1)
+    def checkShortSignal(self, i = None):
+        return self.short_signals[i], None
+
+# Define the config file
+bot_config = {
+    'strategy': {
+        'class': MomentumStrategy,
+        'params': {'momentum_period' : 2}
+    },
+    'entry_settings' : {
+        'trade_amount': 1_000,      # 1_000 Units per trade
+        'go_long' : True,           # Go long
+        'go_short' : False,         # Don't go short
+        'fee': 0.1                  # 0.1% fee per trade
+    },
+    'exit_settings' : {
+        'exit_on_signal': True    # Exit when you receive opposite signal (we're
+                                  # in a LONG position and we get SHORT signal)
+    }
+}
+
+if __name__ == '__main__':
+    # Connect to exchange and get data (last 1000 1h candles for BTC/USDT)
+    exchange = CcxtExchange('binance', {'enableRateLimit':True})
+    df = exchange.getOHLCVHistorical("BTC/USDT", '1h', 1000)
+    # Backtest bot on this data given the previously defined parameters
+    bt = Backtester(bot_config)
+    bt.backtest(df)
+    # Show graph 
+    bt.get_fig().show()
+
+```
+</details>
+
+<details>
+ <summary> Running a Bot. </summary>
+<br/>
 
 ```py
 from pyjuque.Bot import defineBot
@@ -72,9 +172,14 @@ def Main():
 if __name__ == '__main__':
     Main()
 ```
+</details>
 
-## Run a Simple Bot
 
+## Detailed Explanation
+
+<details>
+ <summary> Expand bot explanation. </summary>
+<br/>
 The idea behind this library is to allow you to implement whatever trading strategy you want, without having to worry about how to connect to the different exchanges via apis, or how to place, cancel and keep track of orders. You simply provide the signals and pyjuque does the rest. 
 
 There are a number of settings that you define, like what symbols to trade on, how much money to place per trade and what exchange to use. You also get to set exit settings such as a take profit value and a stop loss value. All these settings get specified in a config dict. Below is a complete example of a config dict:
@@ -193,6 +298,8 @@ if __name__ == '__main__':
 Upon creating the bot, a database will be created in your computer, keeping track of orders placed. You can run this example and it will work - but you should update customEntryFunction to do some calculations & return true sometimes, because in its current state the bot won't ever make any trades.
 
 Checkout these examples for more info: [strategy 1](/examples/Bot_CustomStrategy.py), [strategy 2](/examples/Bot_StrategyFromTemplate.py).
+
+</details>
 
 ## Features
 
