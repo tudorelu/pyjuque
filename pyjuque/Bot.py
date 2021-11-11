@@ -62,9 +62,9 @@ def defineBot(bot_config):
     assert len(symbols) > 0, 'You provided an empty symbols list!' + \
         ' It should hold at least one valid symbol.'
     init_symbol = symbols[0]
-    quote_asset = symbols[0].split('/')[1]
+    quote_asset = symbols[0].split('/')[1] if '/' in symbols[0] else symbols[0]
     for symbol in symbols:
-        symbol_quote = symbol.split('/')[1]
+        symbol_quote = symbol.split('/')[1] if '/' in symbol else symbol
         assert quote_asset == symbol_quote, 'All pairs must be trading against the same' + \
             ' asset, but in this case they don\'t: {}, {}'.format(init_symbol, symbol)
     bot_config['quote_asset'] = quote_asset
