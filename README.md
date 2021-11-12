@@ -10,8 +10,14 @@ This project implements the basic functionality required to engage in algorithmi
  <summary> Expand installation details. </summary>
 
 <br/>
-Make sure you have pip installed. Run:
 
+
+Make sure you have pip installed. To install the latest version run:
+```sh
+pip install -U git+https://github.com/tudorelu/pyjuque
+```
+ 
+To install an older (stable) version, run:
 ```sh
 pip install pyjuque
 ```
