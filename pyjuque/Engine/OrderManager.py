@@ -122,7 +122,6 @@ def simulateOrderInfo(exchange, order, kline_interval):
 def cancelOrder(exchange, order):
     if order.order_type == 'stop_loss':
         return exchange.cancelAlgoOrder(order.symbol, order.id, is_custom_id=True)
-
     return exchange.cancelOrder(order.symbol, order.id, is_custom_id=True)
 
 

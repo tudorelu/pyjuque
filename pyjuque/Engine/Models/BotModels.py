@@ -110,16 +110,15 @@ class TABotModel(BaseBotModel):
     
 
 class EntrySettingsModel(Base):
-    """
-    Model for entry settings
-    """
+    """Model for entry settings """
 
     __tablename__ = 'entry_settings'
     id = db.Column(db.Integer, primary_key=True)                  	# Unique ID
     name = db.Column(db.String(30))                                 # Name (for UI)
     bots = relationship('TABotModel', backref=backref('entry_settings'))
     open_buy_order_time_out = db.Column(db.Integer, default=math.inf)
-    initial_entry_allocation = db.Column(db.Integer, default=None)	# What % of funds allocated to the bot will go to an initial entry
+    trade_amount = db.Column(db.Integer, default=None)	            # Funds allocated per trade
+    reinvest_profits = db.Column(db.Boolean, default=False)	        # Whether to reinvest profits in the new trades or not
     subsequent_entries = db.Column(db.Integer, default=0)         	# Are there subsequent entries
     subsequent_entry_allocation = db.Column(db.Float, default=1)  	# What % of the initial quantity will we buy on a 
                                     # subsequent entry (1 = 100%, 0.5 = 50%)

@@ -146,7 +146,7 @@ bot_config = {
         'entry_function': customEntryStrategy,
     },
     'entry_settings' : {
-        'initial_entry_allocation': 100,  # 100% of starting_balance goes in every trade
+        'trade_amount': 0.0005,           # amount that goes in every trade (should be less than or equal to starting_balance)
         'signal_distance': 0.3            # upon receiving an entry_signal, entry order
                                           # is placed 0.3% away from market price
     },
@@ -220,7 +220,7 @@ bot_config = {
     'entry_settings' : {
 
         # between 0 and 100, the % of the starting_balance to put in an order
-        'initial_entry_allocation': 100,
+        'trade_amount': 0.0005,
 
         # number between 0 and 100 - 1% means that when we get a buy signal, 
         # we place buy order 1% below current price. if 0, we place a market 

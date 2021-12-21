@@ -12,12 +12,11 @@ root_path = abspath(join(curr_path, pardir, pardir))
 sys.path.append(root_path)
 
 # Import for defining the Strategy
+from pyjuque.Backtester import Backtester
 from pyjuque.Strategies import StrategyTemplate
 from pyjuque.Exchanges.CcxtExchange import CcxtExchange
-from pyjuque.Engine.BacktesterSundayTheQuant import Backtester
 from pyjuque.Plotting import PlotData
 from pprint import pprint
-import time
 
 ## Defines the strategy
 class EMACross(StrategyTemplate):
@@ -90,16 +89,19 @@ bot_config = {
     },
     'timeframe' : '1m',
     'entry_settings' : {
-        'initial_entry_allocation': 10,
+        'trade_amount': 10,
         'signal_distance': 0.3,
         'leverage': 1,
     },
     'exit_settings' : {
         'take_profit' : 10,
         'stop_loss_value': 20,
-        'exit_on_signal': True
+        'exit_on_signal': True,
+        'sell_on_end': True
     }
 }
+
+from time import time as timer
 
 def Main():
     # backtests a bot using the same config that can run a bot
@@ -111,24 +113,37 @@ def Main():
 
     for symbol in bot_config['symbols']:
         # and download the data
-        df = exchange.getOHLCV(symbol, '1m', 1000)
+        df = exchange.getOHLCVHistorical(symbol, '1m', 1000)
         # and run it on the data downloaded before
+
+        start_ = timer()
         bt.backtest(df)
         # we then retreive and print the results
-        results = bt.return_results()
-        print(symbol)
-        pprint(results)
+
+        # print(symbol)
+        # pprint(results)
         
+        # print(bt.entries)
+        # print(bt.exits)
+        print(f'Backtesting {symbol} took {timer() - start_}s')
+
+        results = bt.return_results()
+
+        # print(bt.equity_curve)
         # and we also Plot OHLCV, indicators & signals
         PlotData(df, 
             plot_indicators=[
                 dict(name = 'slow_ma', title = 'SLOW HMA'),
                 dict(name = 'fast_ma', title = 'FAST HMA'),
+                dict(name = 'balance', title = 'BALANCE', yaxis='y3', source=bt.balance_curve),
+                dict(name = 'profit', title = 'PROFIT', yaxis='y3', source=bt.equity_curve),
             ],
             signals=[
                 dict(name = 'entry orders', points = bt.entries), 
                 dict(name = 'exit orders', points = bt.exits),
-            ], title=symbol, show_plot=True)
+            ], plot_title = symbol.replace('/', '-'), show_plot=True)
+        
+        bt.reset_results()
 
 
 if __name__ == '__main__':

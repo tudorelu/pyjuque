@@ -35,15 +35,12 @@ class BaseBacktester():
         if params['entry_settings'].__contains__('ignore_last_candle'):
             self.ignore_last_candle = params['entry_settings']['ignore_last_candle']
 
-        self.trade_amount = None
-        if params['entry_settings'].__contains__('trade_amount'):
-            self.trade_amount = params['entry_settings']['trade_amount']
         self.use_base_amount = False
         if params['entry_settings'].__contains__('use_base_amount'):
             self.use_base_amount = params['entry_settings']['use_base_amount']
-        self.initial_entry_allocation = 100
-        if params['entry_settings'].__contains__('initial_entry_allocation'):
-            self.initial_entry_allocation = params['entry_settings']['initial_entry_allocation']
+        self.trade_amount = self.initial_balance
+        if params['entry_settings'].__contains__('trade_amount'):
+            self.trade_amount = params['entry_settings']['trade_amount']
 
         self.symbol = None
         if params.__contains__('symbol'):
@@ -73,10 +70,10 @@ class BaseBacktester():
         self.n_longs = 0
         self.n_shorts = 0
         # amount that goes in a trade ?
-        if self.trade_amount == None:
-            self.trade_amount = self.initial_balance \
-                * (self.initial_entry_allocation / 100) \
-                * self.leverage
+        # if self.trade_amount == None:
+        #     self.trade_amount = self.initial_balance \
+        #         * (self.initial_entry_allocation / 100) \
+        #         * self.leverage
         self.fee_cost = self.fee / 100
         self.pnl_curve = []
         self.drawdown_curve = []
@@ -132,9 +129,6 @@ class BaseBacktester():
         self.exit_on_long = False
         if params['exit_settings'].__contains__('exit_on_signal'):
             self.exit_on_long = params['exit_settings']['exit_on_signal']
-        self.sell_on_end = False
-        if params['exit_settings'].__contains__('sell_on_end'):
-            self.sell_on_end = params['exit_settings']['sell_on_end']
         self.sell_on_end = False
         if params['exit_settings'].__contains__('sell_on_end'):
             self.sell_on_end = params['exit_settings']['sell_on_end']

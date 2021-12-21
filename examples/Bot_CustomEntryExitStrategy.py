@@ -107,7 +107,7 @@ bot_config = {
     },
 
     'entry_settings' : {
-        'initial_entry_allocation': 1,
+        'trade_amount': 100,
         'signal_distance': 0.2
     },
 

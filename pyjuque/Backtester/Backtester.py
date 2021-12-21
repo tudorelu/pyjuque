@@ -10,6 +10,10 @@ from time import time as timer
 from pyjuque.Backtester.BaseBacktester import BaseBacktester
 from pyjuque.Utils.Plotter import PlotData
 
+"""
+TODO:
+Calculate extra stats - profit factor, gross profit, gross loss, sharpe ratio & others
+"""
 class Backtester(BaseBacktester):
     def __init__(self, params = {}, strategies_dir='pyjuque.Strategies'):
         super().__init__(params, strategies_dir)
@@ -18,10 +22,10 @@ class Backtester(BaseBacktester):
         self.n_longs = 0
         self.n_shorts = 0
         # amount that goes in a trade ?
-        if self.trade_amount == None:
-            self.trade_amount = self.initial_balance \
-                * self.leverage \
-                * (self.initial_entry_allocation / 100)
+        # if self.trade_amount == None:
+        #     self.trade_amount = self.initial_balance \
+        #         * self.leverage \
+        #         * (self.initial_entry_allocation / 100)
         self.fee_cost = self.fee / 100
         self.pnl_curve = []
         self.drawdown_curve = []
@@ -43,6 +47,7 @@ class Backtester(BaseBacktester):
         self.profit_avg_trade = 0.
         self.longest_drawdown_period = 0
         self.average_drawdown_period = 0
+        self.sharpe_ratio = None
 
     def backtest(self, df, **strategy_kwargs):
         # setup strategy on given dataframe (computes signals)
@@ -212,8 +217,8 @@ class Backtester(BaseBacktester):
             'longest_drawdown_period': float(self.longest_drawdown_period / l_d),
             'average_drawdown_period': int(self.average_drawdown_period),
             # 'max_flat_period' : self.max_flat_period,
-            'timeframe' : self.timeframe,
-            'symbol': self.symbol,
+            # 'timeframe' : self.timeframe,
+            # 'symbol': self.symbol,
             'n_longs' : self.n_longs,
             'n_shorts': self.n_shorts,
             'n_total_trades' : self.total_trades,

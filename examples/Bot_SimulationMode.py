@@ -109,7 +109,7 @@ bot_config = {
     },
     'timeframe' : '1m',
     'entry_settings' : {
-        'initial_entry_allocation': 10,
+        'trade_amount': 10,
         'signal_distance': 0.3,
         'leverage': 1,
     },

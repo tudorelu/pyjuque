@@ -2,7 +2,8 @@ import os
 import plotly.graph_objs as go
 from plotly.offline import plot
 import random
-
+from pandas.core.series import Series
+from pandas.core.frame import DataFrame
 """
     This file contains all the tools used for plotting data.
 
@@ -94,7 +95,9 @@ def GetPlotData(df,
         data.append(price)
     
     for ind in plot_indicators:
-        if df.__contains__(ind['name']):
+
+        custom_source = ind.get('source', False)
+        if custom_source or df.__contains__(ind['name']):
             if ind.get('showlegend', None) is None:
                 ind['showlegend'] = True
             if ind.get('xvalue', None) is None:
@@ -114,10 +117,20 @@ def GetPlotData(df,
             if ind.get('mode', None) is None:
                 ind['mode'] = 'lines'
 
+            x_source = []
+            y_source = []
+            if custom_source:
+                for entry in custom_source:
+                    x_source.append(entry[0])
+                    y_source.append(entry[1])
+            else:
+                x_source = df[ind['xvalue']]
+                y_source = df[ind['name']]
+
             if ind['type'] == 'bar':
                 trace = go.Bar(
-                    x = df[ind['xvalue']], 
-                    y = df[ind['name']], 
+                    x = x_source, 
+                    y = y_source, 
                     name = ind['title'],
                     xaxis = ind['xaxis'], 
                     yaxis = ind['yaxis'], 
@@ -127,8 +140,8 @@ def GetPlotData(df,
                 marker = dict(color = ind['color']))
             else:
                 trace = go.Scatter( 
-                    x = df[ind['xvalue']],
-                    y = df[ind['name']], 
+                    x = x_source,
+                    y = y_source, 
                     name = ind['title'],
                     mode = ind['mode'], 
                     xaxis = ind['xaxis'], 
@@ -152,7 +165,7 @@ def GetPlotData(df,
 
     if signals:
         for signal in signals:
-            size_multiplier = [10 for z in signal["points"]]
+            size_multiplier = [1 for z in signal["points"]]
             if len(signal["points"]) > 1:
                 if len(signal["points"][0]) > 2:
                     size_multiplier = [z[2] for z in signal["points"]]
@@ -168,6 +181,7 @@ def GetPlotData(df,
     
     return data
 
+
 def PlotData(df,
     add_candles:bool=True,
     add_volume:bool=True,
@@ -180,7 +194,8 @@ def PlotData(df,
     regimes_number=None,
     trends=False,
     save_plot=False,
-    show_plot=False,         
+    show_plot=False,
+    stats=None,
     use_figure_widget=False,
     plot_title:str="Unnamed"):
     '''
@@ -228,7 +243,7 @@ def PlotData(df,
             'type': 'date'},
     )
     
-    y2, y3 = False, False
+    y2, y3, y4 = False, False, False
     if add_volume:
         y2 = True
     for ind in plot_indicators:
@@ -237,8 +252,10 @@ def PlotData(df,
                 y2 = True
             if ind['yaxis'] == 'y3':
                 y3 = True
+            if ind['yaxis'] == 'y4':
+                y4 = True
 
-    if y2 and y3:
+    if y2 and y3 and y4:
         layout.update(
             yaxis={
                 "domain": [0.3, 1],
@@ -249,21 +266,27 @@ def PlotData(df,
             })
         layout.update(
             yaxis2=dict(
-                domain = [0.15, 0.29],
+                domain = [0.20, 0.29],
                 side = 'right',
                 showticklabels = False,
                 # title  = "Volume"
             ))
         layout.update(
             yaxis3=dict(
-                domain = [0, 0.15],
+                domain = [0.1, 0.19],
                 showticklabels = False,
                 # title=""
             ))
-    elif y2:
+        layout.update(
+            yaxis4=dict(
+                domain = [0, 0.09],
+                showticklabels = False,
+                # title=""
+            ))
+    elif (y2 and y3) or (y2 and y4) or (y3 and y4):
         layout.update(
             yaxis={
-                "domain": [0.25, 1],
+                "domain": [0.3, 1],
                 # "title": "Price", 
                 "fixedrange":False,
                 "ticks": '',
@@ -271,15 +294,21 @@ def PlotData(df,
         )
         layout.update(
             yaxis2=dict(
-                domain = [0, 0.24],
+                domain = [0.15, 0.29],
                 side = 'right',
                 showticklabels = False,
                 # title  = "Volume"
                 ))
-    elif y3:
+        layout.update(
+            yaxis3=dict(
+                domain = [0, 0.14],
+                showticklabels = False,
+                # title=""
+            ))
+    elif y3 or y2 or y4:
         layout.update(
             yaxis={
-                "domain": [0.25, 1],
+                "domain": [0.2, 1],
                 # "title": "Price", 
                 "fixedrange":False,
                 "ticks": '',
@@ -287,7 +316,7 @@ def PlotData(df,
         )
         layout.update(
             yaxis3=dict(
-                domain = [0, 0.24],
+                domain = [0, 0.19],
                 showticklabels = False,
                 # ticks="",
                 # title=""
@@ -307,12 +336,52 @@ def PlotData(df,
     if plot_shapes:
         layout.update(shapes=layout['shapes'].__add__(tuple(plot_shapes)))
 
+    if stats != None:
+
+        stat_names = []
+        stat_vals = []
+        for stat in stats.keys():
+            if type(stats[stat]) not in [Series, DataFrame]:
+                stat_names.append(stat)
+                stat_vals.append(round(stats[stat], 4))
+            # else:
+            #     print(stat, type(stats[stat]))
+
+        # print(stat_names)
+        table = go.Table(
+            header=dict(
+                values=["Performance Indicators", "<b>Values</b>"],
+                # line_color='white', fill_color='white',
+                align='center', font=dict(color='black', size=12)
+            ),
+            cells=dict(
+                values=[stat_names, stat_vals],
+                # line_color=[df.Color], fill_color=[df.Color],
+                align='center', font=dict(color='black', size=12)
+            ),
+            domain=dict(
+                x=[0.76, 1],
+                y=[0, 1]
+            ))
+        data.append(table)
+        layout.update(
+            xaxis={
+                "domain": [0, 0.75],
+                'rangeslider': {
+                    'visible': False,
+                    'yaxis': {
+                        'rangemode':'match'
+                    }
+                }, 
+                "showticklabels":False,
+                'type': 'date'})
     # style and display
     if use_figure_widget:
         fig = go.FigureWidget(data = data, layout = layout)
     else:
         fig = go.Figure(data = data, layout = layout)
-    
+        fig = go.Figure(data = data, layout = layout)
+
     if save_plot or show_plot:
         file_path = os.path.abspath('graphs')
         if not os.path.exists(file_path):

@@ -61,7 +61,7 @@ class TestSqliteDecimal(unittest.TestCase):
                 'exit_function': exitFunction,
             },
             'entry_settings' : {
-                'initial_entry_allocation': 1,
+                'trade_amount': 100,
                 'signal_distance': 0.2
             },
             'exit_settings' : {

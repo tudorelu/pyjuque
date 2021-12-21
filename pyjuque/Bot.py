@@ -33,7 +33,7 @@ import functools
 #         }
 #     },
 #     'entry_settings' : {
-#         'initial_entry_allocation': 20,
+#         'trade_amount': 0.0001,
 #         'signal_distance': 0.3
 #     },
 #     'exit_strategy' : None,
@@ -83,31 +83,35 @@ def _defineTaBot(bot_config):
     exchange_params = bot_config['exchange']['params']
     exchange = CcxtExchange(exchange_name, exchange_params)
     bot_model = session.query(TABotModel).filter_by(name=bot_name).first()
-    
+    ######################################################
+    ######### Create entry in database if inexistent
+    ###################################################### 
     if bot_model is None:
-        print('No bot found by name: {}. Creating...'.format(bot_name))
+        print(f'No bot found by name: {bot_name}. Creating...')
         InitializeDatabaseTaBot(session, bot_config)
         return _defineTaBot(bot_config)
-
-    # print('Bot model before init bot_controller', bot_model)
     timeframe = '5m'
     if bot_config.__contains__('timeframe'):
         timeframe = bot_config['timeframe']
-    bot_controller = BotController(session, bot_model, exchange, None)
+    bot_controller = BotController(session=session, bot=bot_model, exchange=exchange, timeframe=timeframe)
+    ######################################################
+    ######### Whether to display status information or not
+    ###################################################### 
+    display_status = True
     if bot_config.__contains__('display_status'):
-        if bot_config['display_status']:
-            status_printer = yaspin()
-            bot_controller.status_printer = status_printer
-    else:
+        display_status = bot_config['display_status']
+    if display_status:
         status_printer = yaspin()
         bot_controller.status_printer = status_printer
-    
+    ###########################
+    ######### Strategy setup
+    ###########################
     if bot_config.__contains__('strategy'):
         found = False
         if bot_config['strategy'].__contains__('custom'):
             if bot_config['strategy']['custom'] == True:
                 found = True
-                def nothing(self, symbol): return False, None
+                def nothing(self, *args, **kwargs): return False, None
                 entry_function = nothing
                 exit_function = nothing
                 if bot_config['strategy'].__contains__('entry_function'):
@@ -116,13 +120,10 @@ def _defineTaBot(bot_config):
                 if bot_config['strategy'].__contains__('exit_function'):
                     if bot_config['strategy']['exit_function'] not in [None, False]:
                         exit_function = bot_config['strategy']['exit_function']
-
             bot_controller.checkEntryStrategy = functools.partial(entry_function, bot_controller)
             bot_controller.checkExitStrategy = functools.partial(exit_function, bot_controller)
-
         if not found and bot_config['strategy'].__contains__('class'):
             bot_controller.strategy = bot_config['strategy']['class'](**bot_config['strategy']['params'])
-    
     return bot_controller
 
 # def Main():

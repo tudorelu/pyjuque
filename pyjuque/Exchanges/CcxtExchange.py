@@ -34,7 +34,6 @@ class CcxtExchange():
         return df
 
 
-
     def getOHLCVHistory(self, symbol, interval, limit=None, start_time=None, cast_to=float):
         """ Converts cctx ohlcv data from list of lists to dataframe. """
         time_now = datetime.timestamp(datetime.now()) * 1000
@@ -52,19 +51,86 @@ class CcxtExchange():
         while last_time + time_diff < time_now:
             l = 1000
             if max_limit != None:
-                print(max_limit)
+                # print(max_limit)
                 l = max_limit
                 if l >= 1000:
                     l = 1000
                     max_limit = max_limit - 1000
+            last_time = df.iloc[-1]['time']
             df2 = self.getOHLCV(symbol, interval, limit=l, start_time=last_time, cast_to=cast_to)
             df = df.append(df2, ignore_index = True)
-            last_time = df.iloc[-1]['time']
             if l < 1000:
+                # print('len df is', len(df))
                 return df
             # print(last_time)
             # print(df.loc[len(df)-1])
+        # print('len df is', len(df))
         return df
+
+
+    def _getHistData(self, symbol, interval, start_time, end_time, cast_to):
+        # print(start_time, end_time, end_time - start_time)
+        df1 = self.getOHLCV(symbol, interval, limit=1000, start_time=start_time, cast_to=cast_to)
+        # print(df1)
+        len_df2 = len(df1)
+        while df1.iloc[-1]['time'] < end_time and len_df2 >= 1000:
+            last_time = df1.iloc[-1]['time']
+            # print(last_time, end_time, end_time - last_time)
+            df2 = self.getOHLCV(symbol, interval, limit=1000, start_time=last_time, cast_to=cast_to)
+            len_df2 = len(df2)
+            if df2.iloc[-1]['time'] != df1.iloc[-1]['time']:
+                df1 = df1.append(df2, ignore_index=True)
+            # print(df1)
+        df1.loc[(df1['time'] < end_time)]
+        return df1
+
+    def getOHLCVHistorical(
+        self, 
+        symbol, 
+        interval, 
+        limit=1000, 
+        start_time=None, 
+        end_time=None, 
+        cast_to=float):
+
+        if start_time != None:
+            interval_in_ms = self.ccxt.parse_timeframe(interval)
+            start_time -= interval_in_ms * 1000
+            if end_time != None:
+                # get candles between start & end time
+                df1 = self._getHistData(symbol, interval, start_time, end_time, cast_to)
+                
+                # = self.getOHLCV(symbol, interval, limit=1000, start_time=start_time, cast_to=cast_to)
+                # while df1.iloc[-1]['time'] < end_time:
+                #     last_time = df1.iloc[-1]['time']
+                #     df2 = self.getOHLCV(symbol, interval, limit=1000, start_time=last_time, cast_to=cast_to)
+                #     df1 = df1.append(df2, ignore_index=True)
+                # df1.loc[(df1['time'] < end_time)]
+                # return df1
+                
+            elif limit != None:
+                # get limit candles from start_time
+                raise NotImplementedError('This route not implemented yet.')
+            else:
+                # get all candles from start_time until now
+                raise NotImplementedError('This route not implemented yet.')
+        elif end_time != None: 
+            if limit != None:
+                # get limit candles until end_time
+                raise NotImplementedError('This route not implemented yet.')
+            else:
+                raise Exception("""Since end_time was passed, one of start_time"""
+                """ or limit needs to be not None.""")
+        elif limit != None:
+            interval_in_ms = self.ccxt.parse_timeframe(interval)
+            end_time = datetime.timestamp(datetime.now()) * 1000
+            start_time = end_time - limit * interval_in_ms * 1000
+            # print(start_time, end_time, end_time - start_time)
+            df1 = self._getHistData(symbol, interval, start_time, end_time, cast_to)
+            return df1
+            # raise NotImplementedError('This route not implemented yet.')
+        else:
+            raise Exception("""Neither limit, end_time nor start_time were passed.""")
 
     def placeOrder(self, symbol, params, test=False): 
         """ 

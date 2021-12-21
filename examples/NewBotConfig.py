@@ -82,11 +82,14 @@ bot_config = {
         },
     },
 
-    # symbols to trade on
-    'symbols' : ['LINK/BTC', 'ETH/BTC'],
+    # symbols to trade on (ALL SHOULD HAVE THE SAME QUOTE ASSET)
+    'symbols' : ['LINK/BTC'],
 
     # starting balance for bot
     'starting_balance' : 0.0005,
+
+    # whether to display status info in the terminal or not
+    'display_status' : True,
 
     # strategy class / function (here we define the entry and exit strategies.)
     # this bot places an entry order when the 'checkLongSignal' function of 
@@ -105,8 +108,12 @@ bot_config = {
     # to the settings specified below
     'entry_settings' : {
 
-        # between 0 and 100, the % of the starting_balance to put in an order
-        'trade_amount': 0.00025,
+        # how much 'quote' amount to place per trade (in BTC for LINK/BTC) 
+        # has to be less than or equal to quote_amount
+        'trade_amount': 0.0001,
+
+        # whether to increase the trade amount if we make profits or not
+        'reinvest_profits': False,
 
         # number between 0 and 100 - 1% means that when we get a buy signal, 
         # we place buy order 1% below current price. if 0, we place a market 
@@ -124,11 +131,12 @@ bot_config = {
 
         # stop loss value in percent - 10% means stop loss at 10% below our 
         # buy order's filled price
-        'stop_loss_value': 10
+        'stop_loss_value': 10,
+
+        # whether to exit trade on exit signal or not
+        'exit_on_signal': True
     },
 
-    # will the bot display its status / current performing action in the terminal
-    'display_status' : True
 }
 
 

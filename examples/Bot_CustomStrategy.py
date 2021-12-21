@@ -97,8 +97,7 @@ bot_config = {
     # to the settings specified below
     'entry_settings' : {
 
-        # between 0 and 100, the % of the starting_balance to put in an order
-        'initial_entry_allocation': 50,
+        'trade_amount': 0.00025,
 
         # number between 0 and 100 - 1% means that when we get a buy signal, 
         # we place buy order 1% below current price. if 0, we place a market 

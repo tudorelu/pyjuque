@@ -19,13 +19,17 @@ from dotenv import load_dotenv, find_dotenv
 load_dotenv(find_dotenv())
 from datetime import datetime
 
-from pyjuque.Exchanges.Base.Exceptions import \
-    InvalidCredentialsException, \
-    InternalExchangeException, \
-    ExchangeConnectionException
-
 from pprint import pprint
 from enum import Enum
+
+class InvalidCredentialsException(Exception):
+  	pass
+
+class InternalExchangeException(Exception):
+	pass
+
+class ExchangeConnectionException(Exception):
+	pass
 
 class Binance():
     """ Wrapper around the Binance REST API """

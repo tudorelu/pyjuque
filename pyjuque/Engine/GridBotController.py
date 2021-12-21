@@ -46,7 +46,6 @@ class GridBotController:
                     'secret': getenv('{}_API_SECRET'.format(self.exchange_name)),
                     'password': getenv('{}_PASSWORD'.format(self.exchange_name)),
                     'timeout': 30000,
-                    # 'verbose': True,
                     'enableRateLimit': True,
                 })
 
