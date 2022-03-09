@@ -5,7 +5,7 @@ root_path = os.path.abspath(
     os.path.join(curr_path, os.path.pardir, os.path.pardir))
 sys.path.append(root_path)
 from pyjuque.Exchanges.CcxtExchange import CcxtExchange
-from pyjuque.Plotting import PlotData
+from pyjuque.Plotter import create_plot as PlotData
 import plotly.graph_objs as go
 
 def horizontal_line(start_time, end_time, value, color=None):

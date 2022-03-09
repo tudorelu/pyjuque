@@ -1,2 +1,2 @@
-from pyjuque.Engine.Models import *
-from pyjuque.Engine.BotController import BotController
+from .Models import *
+from .BotController import BotController

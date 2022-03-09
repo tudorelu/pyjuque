@@ -1,24 +1,26 @@
-import os 
-import sys
-curr_path = os.path.abspath(__file__)
-root_path = os.path.abspath(
-    os.path.join(curr_path, os.path.pardir, os.path.pardir))
-sys.path.insert(1, root_path)
+# import os 
+# import sys
+# curr_path = os.path.abspath(__file__)
+# root_path = os.path.abspath(
+#     os.path.join(curr_path, os.path.pardir, os.path.pardir))
+# sys.path.insert(1, root_path)
 
+# import pyjuque as pj
+from pyjuque.Bot import defineBot
 from pyjuque.Engine import Models 
-
-from pyjuque.Plotting import PlotData
+from pyjuque.Plotter import create_plot as PlotData
 from tests.utils import get_session
 import unittest
 from unittest.mock import patch
 import pandas
 
+
 class TestSqliteDecimal(unittest.TestCase):
     
     def setUp(self):
-        self.df_adabtc_1k = pandas.read_csv('tests/data/ADABTC_1m_1k.csv')
-        self.df_btcusd_1k = pandas.read_csv('tests/data/BTCUSD_1m_1k.csv')
-        self.df_btcusd_10k = pandas.read_csv('tests/data/BTCUSD_1m_10k.csv')
+        self.df_adabtc_1k = pandas.read_csv('./data/ADABTC_1m_1k.csv')
+        self.df_btcusd_1k = pandas.read_csv('./data/BTCUSD_1m_1k.csv')
+        self.df_btcusd_10k = pandas.read_csv('./data/BTCUSD_1m_10k.csv')
         
     def test_entry_exit_signal(self):
         """ test initialization for sqlitedecimal class """
@@ -53,7 +55,7 @@ class TestSqliteDecimal(unittest.TestCase):
             },
             'timeframe' : '1m',
             'test_run': True,
-            'symbols' : ['ADA/BTC', 'BTC/USD'],
+            'symbols' : ['ADA/BTC'],
             'starting_balance' : 10000,
             'strategy': {
                 'custom': True,
@@ -69,9 +71,9 @@ class TestSqliteDecimal(unittest.TestCase):
             }
         }
 
-        bot_controller = defineBot(bot_config)
-        for i in range(200, 1000):
-            bot_controller.executeBot()
+        # bot_controller = defineBot(bot_config)
+        # for i in range(200, 1000):
+        #     bot_controller.executeBot()
 
 
 if __name__ == '__main__':

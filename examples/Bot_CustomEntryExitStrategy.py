@@ -3,18 +3,10 @@ import time
 # Imports for the strategy
 import pandas_ta as ta
 
-# Importing these to be able to run this example 
-# from the main pyjuque folder
-from os.path import abspath, pardir, join
-import sys
-curr_path = abspath(__file__)
-root_path = abspath(join(curr_path, pardir, pardir))
-sys.path.append(root_path)
-
 # Import for defining the bot
 from pyjuque.Bot import defineBot
 # Import for Plotting
-from pyjuque.Plotting import PlotData
+from pyjuque.Plotter import create_plot as PlotData
 import plotly.graph_objs as go
 
 

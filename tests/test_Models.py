@@ -1,9 +1,11 @@
-import os 
-import sys
-curr_path = os.path.abspath(__file__)
-root_path = os.path.abspath(
-	os.path.join(curr_path, os.path.pardir, os.path.pardir))
-sys.path.insert(1, root_path)
+# import os 
+# import sys
+# curr_path = os.path.abspath(__file__)
+# root_path = os.path.abspath(
+# 	os.path.join(curr_path, os.path.pardir, os.path.pardir))
+# sys.path.insert(1, root_path)
+
+# import pyjuque as pj
 from pyjuque.Engine import Models # pylint: disable=E0401
 from tests.utils import get_session # pylint: disable=E0401
 import unittest

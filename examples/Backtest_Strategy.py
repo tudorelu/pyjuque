@@ -1,149 +1,39 @@
-
-# Imports for the strategy
-import pandas_ta as ta
-
-# Importing these to be able to run this example 
-# from the main pyjuque folder
-from os import getenv
-from os.path import abspath, pardir, join
-import sys
-curr_path = abspath(__file__)
-root_path = abspath(join(curr_path, pardir, pardir))
-sys.path.append(root_path)
-
-# Import for defining the Strategy
-from pyjuque.Backtester import Backtester
-from pyjuque.Strategies import StrategyTemplate
-from pyjuque.Exchanges.CcxtExchange import CcxtExchange
-from pyjuque.Plotting import PlotData
 from pprint import pprint
-
-## Defines the strategy
-class EMACross(StrategyTemplate):
-    """ Bollinger Bands x RSI """
-    minimum_period = 100
-    def __init__(self, fast_ma_len = 10, slow_ma_len = 50):
-        self.fast_ma_len = fast_ma_len
-        self.slow_ma_len = slow_ma_len
-        # the minimum number of candles needed to compute our indicators
-        self.minimum_period = max(100, slow_ma_len)
-
-
-    # the bot will call this function with the latest data from the exchange 
-    # passed through df; this function computes all the indicators needed
-    # for the signal
-    def setUp(self, df):
-        df['slow_ma'] = ta.ema(df['close'], self.slow_ma_len)
-        df['fast_ma'] = ta.ema(df['close'], self.fast_ma_len)
-        self.dataframe = df
-
-
-    # the bot will call this function with the latest data and if this 
-    # returns true, our bot will place a long order
-    def checkLongSignal(self, i = None):
-        """ """
-        df = self.dataframe
-        if i == None:
-            i = len(df) - 1
-        if i < 1:
-            return False
-        if df['low'][i-1] < df['slow_ma'][i-1] and df['low'][i] > df['slow_ma'][i] \
-            and df['low'][i] > df['fast_ma'][i] and df['fast_ma'][i] > df['slow_ma'][i]:
-            return True
-        return False
-
-    # if your exit settings contain 'exit on signa;', the bot will exit if it has an open
-    # order and it receives a short signal (if this function returns true)
-    def checkShortSignal(self, i = None):
-        df = self.dataframe
-        if i == None:
-            i = len(df) - 1
-        if i < 1:
-            return False
-        if (df['low'][i-1] > df['slow_ma'][i-1] or df['fast_ma'][i-1] > df['slow_ma'][i-1] ) \
-            and df['close'][i] < df['slow_ma'][i] and df['close'][i] < df['fast_ma'][i] \
-            and df['fast_ma'][i] < df['slow_ma'][i]:
-            return True
-        return False
-
-
-bot_config = {
-    'name' : 'my_kucoin_bot_testing',
-    'test_run' : True,
-    'exchange' : {
-        'name' : 'kucoin',
-        'params' : {
-            # 'api_key': getenv('KUCOIN_API_KEY'),
-            # 'secret' : getenv('KUCOIN_API_SECRET'),
-            # 'password' : getenv('KUCOIN_PASSWORD'),
-        },
-    },
-    'symbols' : ['SNX/USDT', 'XLM/USDT'], # the backtester will ignore this for now
-    'starting_balance' : 100,
-    'strategy': {
-        'class': EMACross,
-        'params': {
-            'fast_ma_len' : 8, 
-            'slow_ma_len' : 30, 
-        }
-    },
-    'timeframe' : '1m',
-    'entry_settings' : {
-        'trade_amount': 10,
-        'signal_distance': 0.3,
-        'leverage': 1,
-    },
-    'exit_settings' : {
-        'take_profit' : 10,
-        'stop_loss_value': 20,
-        'exit_on_signal': True,
-        'sell_on_end': True
-    }
-}
-
 from time import time as timer
 
-def Main():
-    # backtests a bot using the same config that can run a bot
-    
-    # For the backtester, we initialise the exchange 
-    exchange = CcxtExchange('kucoin')
-    # we then initialize the backtester using the config dict
+from .utils import load_data_from_file
+from pyjuque.Backtester import Backtester
+from pyjuque.Strategies import EMACrossStrategy
+
+bot_config = {
+    'trade_amount' : 100,
+    'strategy_class': EMACrossStrategy,
+    'strategy_params': {
+        'fast_ma_len' : 8, 
+        'slow_ma_len' : 30, 
+    },
+    'fee_percent' : 0.0,
+    'take_profit_value' : 10,
+    'stop_loss_value': 20,
+    'go_long': True,
+    'exit_on_short': True
+}
+
+
+def Main():    
+    # we initialize the backtester using the config object
     bt = Backtester(bot_config)
 
-    for symbol in bot_config['symbols']:
-        # and download the data
-        df = exchange.getOHLCVHistorical(symbol, '1m', 1000)
-        # and run it on the data downloaded before
+    # retreive the data
+    df = load_data_from_file('./data/BTCUSD_1m_1k.csv')
 
-        start_ = timer()
-        bt.backtest(df)
-        # we then retreive and print the results
-
-        # print(symbol)
-        # pprint(results)
-        
-        # print(bt.entries)
-        # print(bt.exits)
-        print(f'Backtesting {symbol} took {timer() - start_}s')
-
-        results = bt.return_results()
-
-        # print(bt.equity_curve)
-        # and we also Plot OHLCV, indicators & signals
-        PlotData(df, 
-            plot_indicators=[
-                dict(name = 'slow_ma', title = 'SLOW HMA'),
-                dict(name = 'fast_ma', title = 'FAST HMA'),
-                dict(name = 'balance', title = 'BALANCE', yaxis='y3', source=bt.balance_curve),
-                dict(name = 'profit', title = 'PROFIT', yaxis='y3', source=bt.equity_curve),
-            ],
-            signals=[
-                dict(name = 'entry orders', points = bt.entries), 
-                dict(name = 'exit orders', points = bt.exits),
-            ], plot_title = symbol.replace('/', '-'), show_plot=True)
-        
-        bt.reset_results()
+    # backtest strategy (and check the run time)
+    start_ = timer()
+    bt.backtest(df)
+    print(f'Backtesting took {timer() - start_}s')
+    
+    # show plot
+    bt.get_plot(add_strategy_indicators=True).show()
 
 
 if __name__ == '__main__':

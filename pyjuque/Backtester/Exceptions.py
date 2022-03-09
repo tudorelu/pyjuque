@@ -1,0 +1,4 @@
+
+
+class InvalidBacktesterConfigError(ValueError):
+    pass
