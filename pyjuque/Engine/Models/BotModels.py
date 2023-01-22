@@ -67,6 +67,9 @@ class BaseBotModel(Base):
     name = db.Column(db.String(30))  
     starting_balance = db.Column(SqliteDecimal(13))
     current_balance = db.Column(SqliteDecimal(13))
+
+    # base_balance = db.Column(SqliteDecimal(13))
+    # quote_balance = db.Column(SqliteDecimal(13))
     profit_loss = db.Column(db.Float, default=100)
     test_run = db.Column(db.Boolean, default=False)
 
