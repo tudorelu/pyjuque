@@ -1,3 +1,15 @@
+## ! This repo has been DEPRECATED, it is not maintained anymore !
+
+.
+
+.
+
+.
+
+.
+
+.
+
 ## **Py**thon **Ju**ju **Qu**ant **E**ngine
 **PYJUQUE**   &nbsp; &nbsp;  *(pai-jook)*
 *(**Py**-thon **Ju**-ju **Qu**-ant **E**-ngine)*
